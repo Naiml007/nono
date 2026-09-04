@@ -1,8 +1,76 @@
 [gd_scene format=3 uid="uid://cemie5jly25y4"]
 
 [ext_resource type="Script" uid="uid://ccdl8wqmhlyf3" path="res://scripts/main_menu.gd" id="1_menu"]
+[ext_resource type="Shader" uid="uid://cwqg8d8c6l8ao" path="res://shaders/menu_bg.gdshader" id="3_shader"]
+[ext_resource type="Texture2D" uid="uid://o8iqbsflod2u" path="res://assets/sprites/player_robot.png" id="4_robot"]
+[ext_resource type="Texture2D" uid="uid://b3x22ks0x2r63" path="res://assets/generated/logo_banner_frame_0.png" id="5_logo"]
 
-[node name="MainMenu" type="Control" unique_id=96888047]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bg"]
+shader = ExtResource("3_shader")
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.05, 0.07, 0.13, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.3, 0.8, 1, 0.35)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_size = 18
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_normal"]
+bg_color = Color(0.1, 0.17, 0.27, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.85, 1, 0.4)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_pressed"]
+bg_color = Color(0.06, 0.13, 0.22, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.9, 1, 1, 0.7)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
+bg_color = Color(0.16, 0.3, 0.46, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.65, 1, 1, 0.95)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_focus"]
+bg_color = Color(0.14, 0.27, 0.4, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 0.85)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="MainMenu" type="Control" unique_id=939725838]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -11,30 +79,26 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_menu")
 
-[node name="Background" type="ColorRect" parent="." unique_id=1649013264]
+[node name="Background" type="ColorRect" parent="." unique_id=1834039688]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.09, 0.11, 0.18, 1)
+color = Color(0.04, 0.05, 0.09, 1)
 
-[node name="Title" type="Label" parent="." unique_id=1754749773]
+[node name="Starfield" type="ColorRect" parent="." unique_id=2030225151]
+material = SubResource("ShaderMaterial_bg")
 layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -240.0
-offset_top = 72.0
-offset_right = 240.0
-offset_bottom = 190.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
-theme_override_font_sizes/font_size = 76
-text = "NONO"
-horizontal_alignment = 1
+grow_vertical = 2
+mouse_filter = 2
 
-[node name="Center" type="CenterContainer" parent="." unique_id=2110173095]
+[node name="Center" type="CenterContainer" parent="." unique_id=983065057]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -42,52 +106,171 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBox" type="VBoxContainer" parent="Center" unique_id=806310876]
+[node name="Panel" type="PanelContainer" parent="Center" unique_id=878301273]
 layout_mode = 2
-theme_override_constants/separation = 22
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="PlayButton" type="Button" parent="Center/VBox" unique_id=774627778]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(260, 58)
+[node name="VBox" type="VBoxContainer" parent="Center/Panel" unique_id=131064521]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
-text = "Play"
+theme_override_constants/separation = 14
 
-[node name="QuitButton" type="Button" parent="Center/VBox" unique_id=1263984101]
+[node name="Robot" type="TextureRect" parent="Center/Panel/VBox" unique_id=1013080260]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(260, 58)
+custom_minimum_size = Vector2(84, 84)
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
-text = "Quit"
+size_flags_horizontal = 4
+texture = ExtResource("4_robot")
+expand_mode = 1
+stretch_mode = 5
 
-[node name="BestLabel" type="Label" parent="." unique_id=753712844]
+[node name="Logo" type="TextureRect" parent="Center/Panel/VBox" unique_id=511464183]
 unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_top = -64.0
-offset_bottom = -24.0
-grow_horizontal = 2
-grow_vertical = 0
+custom_minimum_size = Vector2(336, 112)
+layout_mode = 2
+texture = ExtResource("5_logo")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SubtitleLabel" type="Label" parent="Center/Panel/VBox" unique_id=65887053]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.8, 0.95, 1)
 theme_override_font_sizes/font_size = 20
-text = "Best score: 0"
+text = "ENDLESS SPACE SURVIVAL"
 horizontal_alignment = 1
 
-[node name="Label" type="Label" parent="." unique_id=1944172605]
+[node name="Spacer" type="Control" parent="Center/Panel/VBox" unique_id=853116166]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+
+[node name="PlayButton" type="Button" parent="Center/Panel/VBox" unique_id=1337622671]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 56)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.97, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_btn_focus")
+text = "PLAY"
+
+[node name="SettingsButton" type="Button" parent="Center/Panel/VBox" unique_id=608937330]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 56)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.97, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_btn_focus")
+text = "SETTINGS"
+
+[node name="QuitButton" type="Button" parent="Center/Panel/VBox" unique_id=1706965798]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 56)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.97, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_btn_focus")
+text = "QUIT"
+
+[node name="BestLabel" type="Label" parent="Center/Panel/VBox" unique_id=142908569]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.85, 0.4, 1)
+theme_override_font_sizes/font_size = 18
+text = "BEST SCORE: 0"
+horizontal_alignment = 1
+
+[node name="ControlsHint" type="Label" parent="." unique_id=1201842740]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_top = -136.0
-offset_bottom = -92.0
+offset_top = -46.0
+offset_bottom = -18.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_colors/font_color = Color(0.62, 0.68, 0.8, 1)
-theme_override_font_sizes/font_size = 17
-text = "WASD / Arrows to move   ·   Space / Shift to dash"
+theme_override_colors/font_color = Color(0.62, 0.7, 0.85, 1)
+theme_override_font_sizes/font_size = 16
+text = "Arrows to move · Space / Shift to dash"
 horizontal_alignment = 1
+
+[node name="SettingsOverlay" type="Control" parent="." unique_id=502710566]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SettingsDim" type="ColorRect" parent="SettingsOverlay" unique_id=2147290048]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.04, 0.08, 0.8)
+
+[node name="SettingsCenter" type="CenterContainer" parent="SettingsOverlay" unique_id=2004001856]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SettingsPanel" type="PanelContainer" parent="SettingsOverlay/SettingsCenter" unique_id=825402553]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="SettingsVBox" type="VBoxContainer" parent="SettingsOverlay/SettingsCenter/SettingsPanel" unique_id=171161963]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="SettingsTitle" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=660685792]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 40
+text = "SETTINGS"
+horizontal_alignment = 1
+
+[node name="WasdToggle" type="CheckButton" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=1975196972]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 44)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "WASD movement"
+
+[node name="MouseDashToggle" type="CheckButton" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=1464649638]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 44)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "Mouse click to dash"
+
+[node name="BackButton" type="Button" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=900109791]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 52)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.97, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_btn_focus")
+text = "BACK"

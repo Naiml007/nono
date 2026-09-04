@@ -6,7 +6,11 @@
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="3_player"]
 [ext_resource type="Texture2D" uid="uid://c5focmgn2tq1g" path="res://assets/generated/powerup_shield_frame_0.png" id="4_shieldtex"]
 [ext_resource type="Texture2D" uid="uid://p0cpjol1ye33" path="res://assets/generated/powerup_magnet_frame_0.png" id="5_magnetex"]
+[ext_resource type="Script" uid="uid://8umksf8e80fw" path="res://addons/phantom_camera/scripts/resources/tween_resource.gd" id="5_vtaks"]
 [ext_resource type="Script" uid="uid://dec703vuaj6s6" path="res://scripts/upgrade_panel.gd" id="6_upgradepanel"]
+[ext_resource type="Script" uid="uid://bd046eokvcnu2" path="res://addons/phantom_camera/scripts/phantom_camera_host/phantom_camera_host.gd" id="7_pcamhost"]
+[ext_resource type="Script" uid="uid://bhexx6mj1xv3q" path="res://addons/phantom_camera/scripts/phantom_camera/phantom_camera_2d.gd" id="8_pcam2d"]
+[ext_resource type="Script" uid="uid://b6xtfb50i8p46" path="res://scripts/pause_menu.gd" id="9_pausemenu"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_gee14"]
 texture = ExtResource("2_u5sy4")
@@ -16,6 +20,26 @@ texture_region_size = Vector2i(64, 64)
 [sub_resource type="TileSet" id="TileSet_0tnpc"]
 tile_size = Vector2i(64, 64)
 sources/0 = SubResource("TileSetAtlasSource_gee14")
+
+[sub_resource type="Resource" id="Resource_kvpfn"]
+script = ExtResource("5_vtaks")
+
+[sub_resource type="Resource" id="Resource_dinhu"]
+script = ExtResource("5_vtaks")
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bossbar_bg"]
+bg_color = Color(0.1, 0.08, 0.08, 0.9)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bossbar_fill"]
+bg_color = Color(0.9, 0.2, 0.15, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [node name="Game" type="Node2D" unique_id=1861883669]
 script = ExtResource("1_game")
@@ -29,6 +53,39 @@ tile_set = SubResource("TileSet_0tnpc")
 unique_name_in_owner = true
 position = Vector2(640, 360)
 
+[node name="PhantomCameraHost" type="Node" parent="Camera" unique_id=2100000001]
+process_priority = 300
+process_physics_priority = 300
+script = ExtResource("7_pcamhost")
+
+[node name="PlayerCam" type="Node2D" parent="." unique_id=2100000002 node_paths=PackedStringArray("follow_target")]
+unique_name_in_owner = true
+top_level = true
+position = Vector2(640, 360)
+script = ExtResource("8_pcam2d")
+priority = 10
+follow_mode = 1
+follow_target = NodePath("../Player")
+tween_resource = SubResource("Resource_kvpfn")
+follow_damping = true
+follow_damping_value = Vector2(0.15, 0.15)
+limit_left = 0
+limit_top = 0
+limit_right = 1280
+limit_bottom = 720
+
+[node name="BossCam" type="Node2D" parent="." unique_id=2100000003 node_paths=PackedStringArray("follow_target")]
+unique_name_in_owner = true
+top_level = true
+position = Vector2(640, 360)
+script = ExtResource("8_pcam2d")
+follow_mode = 1
+follow_target = NodePath("../Player")
+zoom = Vector2(1.2, 1.2)
+tween_resource = SubResource("Resource_dinhu")
+follow_damping = true
+follow_damping_value = Vector2(0.12, 0.12)
+
 [node name="Player" parent="." unique_id=1899851139 instance=ExtResource("3_player")]
 unique_name_in_owner = true
 position = Vector2(640, 360)
@@ -38,6 +95,7 @@ unique_name_in_owner = true
 
 [node name="DebrisFieldSpawner" type="Node2D" parent="." unique_id=1371430967]
 unique_name_in_owner = true
+position = Vector2(640, 360)
 script = ExtResource("2_debris")
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1944228728]
@@ -147,6 +205,33 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 color = Color(1, 0, 0, 0)
+
+[node name="BossBar" type="VBoxContainer" parent="HUD" unique_id=2100000004]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 340.0
+offset_top = 10.0
+offset_right = -340.0
+offset_bottom = 66.0
+grow_horizontal = 2
+theme_override_constants/separation = 4
+
+[node name="BossTitle" type="Label" parent="HUD/BossBar" unique_id=2100000005]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.5, 0.3, 1)
+theme_override_font_sizes/font_size = 16
+text = "WAVE 50 BOSS"
+horizontal_alignment = 1
+
+[node name="BossHealth" type="ProgressBar" parent="HUD/BossBar" unique_id=2100000006]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_bossbar_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_bossbar_fill")
+show_percentage = false
 
 [node name="GameOver" type="CanvasLayer" parent="." unique_id=70316299]
 
@@ -264,4 +349,59 @@ theme_override_font_sizes/font_size = 18
 text = "Press 1 / 2 / 3 or click to choose"
 horizontal_alignment = 1
 
+[node name="PauseLayer" type="CanvasLayer" parent="." unique_id=2100000100]
+
+[node name="PausePanel" type="Control" parent="PauseLayer" unique_id=2100000101]
+unique_name_in_owner = true
+process_mode = 3
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("9_pausemenu")
+
+[node name="Dim" type="ColorRect" parent="PauseLayer/PausePanel" unique_id=2100000102]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.04, 0.08, 0.78)
+
+[node name="Center" type="CenterContainer" parent="PauseLayer/PausePanel" unique_id=2100000103]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="PauseLayer/PausePanel/Center" unique_id=2100000104]
+layout_mode = 2
+theme_override_constants/separation = 22
+
+[node name="Title" type="Label" parent="PauseLayer/PausePanel/Center/VBox" unique_id=2100000105]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 56
+text = "PAUSED"
+horizontal_alignment = 1
+
+[node name="ResumeButton" type="Button" parent="PauseLayer/PausePanel/Center/VBox" unique_id=2100000106]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 52)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Resume"
+
+[node name="PauseMenuButton" type="Button" parent="PauseLayer/PausePanel/Center/VBox" unique_id=2100000107]
+custom_minimum_size = Vector2(240, 52)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Menu"
+
 [connection signal="pressed" from="GameOver/GameOverPanel/Center/VBox/GameOverMenuButton" to="." method="_to_menu"]
+[connection signal="pressed" from="PauseLayer/PausePanel/Center/VBox/ResumeButton" to="." method="_on_resume_pressed"]
+[connection signal="pressed" from="PauseLayer/PausePanel/Center/VBox/PauseMenuButton" to="." method="_to_menu"]

@@ -58,18 +58,23 @@ func _physics_process(delta: float) -> void:
 			velocity = Vector2.ZERO
 	else:
 		_cd_left = maxf(_cd_left - delta, 0.0)
-		var input := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+		# move_left/right/up/down carry arrow keys (always) plus WASD when the
+		# WASD-controls setting is enabled (bound/unbound by GameState).
+		var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 		if input != Vector2.ZERO:
 			_facing = input
 		velocity = input * speed * speed_mult
-		if _can_dash() and Input.is_action_just_pressed("ui_accept"):
+		if _can_dash() and Input.is_action_just_pressed("dash"):
 			_try_dash()
 	move_and_slide()
 	_clamp_to_screen()
 	_tick(delta)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_SHIFT:
+	# Mouse-click dash is handled here (not as an InputMap action) so clicks on
+	# UI buttons never also trigger a dash. Space/Shift dash via the "dash" action.
+	if event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_LEFT and GameState.mouse_dash:
 		_try_dash()
 
 func _can_dash() -> bool:
@@ -91,12 +96,22 @@ func _try_dash() -> void:
 			var e := node as Enemy
 			if e != null and is_instance_valid(e) and e.global_position.distance_to(global_position) <= 95.0:
 				e.die(true)
+		for node in get_tree().get_nodes_in_group("boss"):
+			var b := node as Boss
+			if b != null and is_instance_valid(b) and b.global_position.distance_to(global_position) <= 95.0:
+				b.take_damage(3, source_id())
 		Fx.burst(global_position, Color(0.5, 0.85, 1.0), 26, 340, 0.5, 1.5)
 		Fx.shake(7.0, 0.22)
 
 ## Called by an enemy when its hitbox touches this player's hurtbox.
 func on_enemy_contact(enemy: Enemy) -> void:
 	if _dead:
+		return
+	if enemy is Boss:
+		# The boss never dies from contact. A dash is how you damage it (handled
+		# in Boss._tick_dash_damage); otherwise it just damages the player.
+		if not is_dashing and _invuln_left <= 0.0:
+			apply_boss_damage()
 		return
 	if is_dashing or _invuln_left > 0.0:
 		enemy.die(true)
@@ -120,6 +135,33 @@ func on_enemy_contact(enemy: Enemy) -> void:
 	Fx.shake(10.0, 0.3)
 	if hp <= 0:
 		_die()
+
+## Player takes damage from the boss or its projectiles. Dash i-frames,
+## invulnerability and the shield all block it, and it does not kill the attacker.
+func apply_boss_damage() -> void:
+	if _dead or is_dashing or _invuln_left > 0.0:
+		return
+	if has_shield:
+		has_shield = false
+		shield_changed.emit(false)
+		_invuln_left = 0.8
+		_hurt_flash = 0.18
+		Sfx.play("powerup")
+		Fx.shake(4.0, 0.15)
+		return
+	hp -= 1
+	health_changed.emit(hp, max_hp)
+	_invuln_left = invuln_time
+	_hurt_flash = 0.22
+	took_hit.emit()
+	Fx.shake(10.0, 0.3)
+	if hp <= 0:
+		_die()
+
+## Identifier used when this player deals damage. In singleplayer this is always
+## the same id; in future multiplayer each player gets a distinct one.
+func source_id() -> int:
+	return multiplayer.get_unique_id()
 
 func _die() -> void:
 	if _dead:

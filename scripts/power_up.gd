@@ -27,6 +27,7 @@ func _ready() -> void:
 		Type.HEART:
 			sprite.texture = TEX_HEART
 			modulate = Color(1.0, 0.5, 0.6)
+			add_to_group("heart_pickup")
 	body_entered.connect(_on_body_entered)
 
 func _process(delta: float) -> void:

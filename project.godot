@@ -13,13 +13,16 @@ config_version=5
 config/name="nono"
 run/main_scene="uid://cemie5jly25y4"
 config/features=PackedStringArray("4.7", "GL Compatibility")
-config/icon="res://icon.svg"
+config/icon="res://assets/generated/logo_icon_frame_0.png"
 
 [autoload]
 
 GameState="*res://scripts/game_state.gd"
 Sfx="*res://scripts/sfx.gd"
 Fx="*res://scripts/fx.gd"
+Achievements="*res://scripts/achievements.gd"
+PhantomCameraManager="*res://addons/phantom_camera/scripts/managers/phantom_camera_manager.gd"
+Music="*res://scripts/music.gd"
 
 [display]
 
@@ -29,6 +32,10 @@ window/size/viewport_height=720
 [dotnet]
 
 project/assembly_name="nono"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/phantom_camera/plugin.cfg")
 
 [physics]
 
