@@ -704,10 +704,12 @@ func _validate_property(property: Dictionary) -> void:
 
 
 func _enter_tree() -> void:
-	_phantom_camera_manager = Engine.get_singleton(_constants.PCAM_MANAGER_NODE_NAME)
+	if Engine.has_singleton(_constants.PCAM_MANAGER_NODE_NAME):
+		_phantom_camera_manager = Engine.get_singleton(_constants.PCAM_MANAGER_NODE_NAME)
 	_tween_skip = !tween_on_load
 
-	_phantom_camera_manager.pcam_added(self)
+	if is_instance_valid(_phantom_camera_manager):
+		_phantom_camera_manager.pcam_added(self)
 
 	priority_override = false
 
@@ -741,7 +743,8 @@ func _exit_tree() -> void:
 func _ready() -> void:
 	_transform_output = global_transform
 
-	_phantom_camera_manager.noise_2d_emitted.connect(_noise_emitted)
+	if is_instance_valid(_phantom_camera_manager):
+		_phantom_camera_manager.noise_2d_emitted.connect(_noise_emitted)
 
 	if not Engine.is_editor_hint():
 		_preview_noise = true
@@ -1080,6 +1083,8 @@ func _draw() -> void:
 
 
 func _camera_frame_rect() -> Rect2:
+	if not is_instance_valid(_phantom_camera_manager):
+		return Rect2(-get_viewport_rect().size / 2, get_viewport_rect().size)
 	var screen_size_zoom: Vector2 = Vector2(_phantom_camera_manager.screen_size.x / get_zoom().x, _phantom_camera_manager.screen_size.y / get_zoom().y)
 
 	return Rect2(-screen_size_zoom / 2, screen_size_zoom)
