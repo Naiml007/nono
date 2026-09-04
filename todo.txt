@@ -1,0 +1,6 @@
+at wave 50 one big boss if player can kill it player will get achivment let me solo her
+
+fix: despwan heart after each wave
+fix: coin collect audio
+
+add: phantom_camera https://phantom-camera.dev/overview/installation

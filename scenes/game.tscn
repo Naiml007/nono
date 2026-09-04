@@ -1,0 +1,267 @@
+[gd_scene format=4 uid="uid://doxj416lwii2r"]
+
+[ext_resource type="Script" uid="uid://f4j37fuqtv3l" path="res://scripts/game.gd" id="1_game"]
+[ext_resource type="Script" uid="uid://bfbicwyml54ox" path="res://scripts/DebrisFieldSpawner.gd" id="2_debris"]
+[ext_resource type="Texture2D" uid="uid://batjfjihvqso5" path="res://assets/generated/space_bg_tile.png" id="2_u5sy4"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="3_player"]
+[ext_resource type="Texture2D" uid="uid://c5focmgn2tq1g" path="res://assets/generated/powerup_shield_frame_0.png" id="4_shieldtex"]
+[ext_resource type="Texture2D" uid="uid://p0cpjol1ye33" path="res://assets/generated/powerup_magnet_frame_0.png" id="5_magnetex"]
+[ext_resource type="Script" uid="uid://dec703vuaj6s6" path="res://scripts/upgrade_panel.gd" id="6_upgradepanel"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_gee14"]
+texture = ExtResource("2_u5sy4")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_0tnpc"]
+tile_size = Vector2i(64, 64)
+sources/0 = SubResource("TileSetAtlasSource_gee14")
+
+[node name="Game" type="Node2D" unique_id=1861883669]
+script = ExtResource("1_game")
+
+[node name="Background" type="TileMapLayer" parent="." unique_id=955792762]
+z_index = -10
+tile_map_data = PackedByteArray("AAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAACAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAFAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAHAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAJAAAAAAAAAAAAAAAKAAAAAAAAAAAAAAALAAAAAAAAAAAAAAAMAAAAAAAAAAAAAAANAAAAAAAAAAAAAAAOAAAAAAAAAAAAAAAPAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAARAAAAAAAAAAAAAAASAAAAAAAAAAAAAAATAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAABAAEAAAAAAAAAAAACAAEAAAAAAAAAAAADAAEAAAAAAAAAAAAEAAEAAAAAAAAAAAAFAAEAAAAAAAAAAAAGAAEAAAAAAAAAAAAHAAEAAAAAAAAAAAAIAAEAAAAAAAAAAAAJAAEAAAAAAAAAAAAKAAEAAAAAAAAAAAALAAEAAAAAAAAAAAAMAAEAAAAAAAAAAAANAAEAAAAAAAAAAAAOAAEAAAAAAAAAAAAPAAEAAAAAAAAAAAAQAAEAAAAAAAAAAAARAAEAAAAAAAAAAAASAAEAAAAAAAAAAAATAAEAAAAAAAAAAAAAAAIAAAAAAAAAAAABAAIAAAAAAAAAAAACAAIAAAAAAAAAAAADAAIAAAAAAAAAAAAEAAIAAAAAAAAAAAAFAAIAAAAAAAAAAAAGAAIAAAAAAAAAAAAHAAIAAAAAAAAAAAAIAAIAAAAAAAAAAAAJAAIAAAAAAAAAAAAKAAIAAAAAAAAAAAALAAIAAAAAAAAAAAAMAAIAAAAAAAAAAAANAAIAAAAAAAAAAAAOAAIAAAAAAAAAAAAPAAIAAAAAAAAAAAAQAAIAAAAAAAAAAAARAAIAAAAAAAAAAAASAAIAAAAAAAAAAAATAAIAAAAAAAAAAAAAAAMAAAAAAAAAAAABAAMAAAAAAAAAAAACAAMAAAAAAAAAAAADAAMAAAAAAAAAAAAEAAMAAAAAAAAAAAAFAAMAAAAAAAAAAAAGAAMAAAAAAAAAAAAHAAMAAAAAAAAAAAAIAAMAAAAAAAAAAAAJAAMAAAAAAAAAAAAKAAMAAAAAAAAAAAALAAMAAAAAAAAAAAAMAAMAAAAAAAAAAAANAAMAAAAAAAAAAAAOAAMAAAAAAAAAAAAPAAMAAAAAAAAAAAAQAAMAAAAAAAAAAAARAAMAAAAAAAAAAAASAAMAAAAAAAAAAAATAAMAAAAAAAAAAAAAAAQAAAAAAAAAAAABAAQAAAAAAAAAAAACAAQAAAAAAAAAAAADAAQAAAAAAAAAAAAEAAQAAAAAAAAAAAAFAAQAAAAAAAAAAAAGAAQAAAAAAAAAAAAHAAQAAAAAAAAAAAAIAAQAAAAAAAAAAAAJAAQAAAAAAAAAAAAKAAQAAAAAAAAAAAALAAQAAAAAAAAAAAAMAAQAAAAAAAAAAAANAAQAAAAAAAAAAAAOAAQAAAAAAAAAAAAPAAQAAAAAAAAAAAAQAAQAAAAAAAAAAAARAAQAAAAAAAAAAAASAAQAAAAAAAAAAAATAAQAAAAAAAAAAAAAAAUAAAAAAAAAAAABAAUAAAAAAAAAAAACAAUAAAAAAAAAAAADAAUAAAAAAAAAAAAEAAUAAAAAAAAAAAAFAAUAAAAAAAAAAAAGAAUAAAAAAAAAAAAHAAUAAAAAAAAAAAAIAAUAAAAAAAAAAAAJAAUAAAAAAAAAAAAKAAUAAAAAAAAAAAALAAUAAAAAAAAAAAAMAAUAAAAAAAAAAAANAAUAAAAAAAAAAAAOAAUAAAAAAAAAAAAPAAUAAAAAAAAAAAAQAAUAAAAAAAAAAAARAAUAAAAAAAAAAAASAAUAAAAAAAAAAAATAAUAAAAAAAAAAAAAAAYAAAAAAAAAAAABAAYAAAAAAAAAAAACAAYAAAAAAAAAAAADAAYAAAAAAAAAAAAEAAYAAAAAAAAAAAAFAAYAAAAAAAAAAAAGAAYAAAAAAAAAAAAHAAYAAAAAAAAAAAAIAAYAAAAAAAAAAAAJAAYAAAAAAAAAAAAKAAYAAAAAAAAAAAALAAYAAAAAAAAAAAAMAAYAAAAAAAAAAAANAAYAAAAAAAAAAAAOAAYAAAAAAAAAAAAPAAYAAAAAAAAAAAAQAAYAAAAAAAAAAAARAAYAAAAAAAAAAAASAAYAAAAAAAAAAAATAAYAAAAAAAAAAAAAAAcAAAAAAAAAAAABAAcAAAAAAAAAAAACAAcAAAAAAAAAAAADAAcAAAAAAAAAAAAEAAcAAAAAAAAAAAAFAAcAAAAAAAAAAAAGAAcAAAAAAAAAAAAHAAcAAAAAAAAAAAAIAAcAAAAAAAAAAAAJAAcAAAAAAAAAAAAKAAcAAAAAAAAAAAALAAcAAAAAAAAAAAAMAAcAAAAAAAAAAAANAAcAAAAAAAAAAAAOAAcAAAAAAAAAAAAPAAcAAAAAAAAAAAAQAAcAAAAAAAAAAAARAAcAAAAAAAAAAAASAAcAAAAAAAAAAAATAAcAAAAAAAAAAAAAAAgAAAAAAAAAAAABAAgAAAAAAAAAAAACAAgAAAAAAAAAAAADAAgAAAAAAAAAAAAEAAgAAAAAAAAAAAAFAAgAAAAAAAAAAAAGAAgAAAAAAAAAAAAHAAgAAAAAAAAAAAAIAAgAAAAAAAAAAAAJAAgAAAAAAAAAAAAKAAgAAAAAAAAAAAALAAgAAAAAAAAAAAAMAAgAAAAAAAAAAAANAAgAAAAAAAAAAAAOAAgAAAAAAAAAAAAPAAgAAAAAAAAAAAAQAAgAAAAAAAAAAAARAAgAAAAAAAAAAAASAAgAAAAAAAAAAAATAAgAAAAAAAAAAAAAAAkAAAAAAAAAAAABAAkAAAAAAAAAAAACAAkAAAAAAAAAAAADAAkAAAAAAAAAAAAEAAkAAAAAAAAAAAAFAAkAAAAAAAAAAAAGAAkAAAAAAAAAAAAHAAkAAAAAAAAAAAAIAAkAAAAAAAAAAAAJAAkAAAAAAAAAAAAKAAkAAAAAAAAAAAALAAkAAAAAAAAAAAAMAAkAAAAAAAAAAAANAAkAAAAAAAAAAAAOAAkAAAAAAAAAAAAPAAkAAAAAAAAAAAAQAAkAAAAAAAAAAAARAAkAAAAAAAAAAAASAAkAAAAAAAAAAAATAAkAAAAAAAAAAAAAAAoAAAAAAAAAAAABAAoAAAAAAAAAAAACAAoAAAAAAAAAAAADAAoAAAAAAAAAAAAEAAoAAAAAAAAAAAAFAAoAAAAAAAAAAAAGAAoAAAAAAAAAAAAHAAoAAAAAAAAAAAAIAAoAAAAAAAAAAAAJAAoAAAAAAAAAAAAKAAoAAAAAAAAAAAALAAoAAAAAAAAAAAAMAAoAAAAAAAAAAAANAAoAAAAAAAAAAAAOAAoAAAAAAAAAAAAPAAoAAAAAAAAAAAAQAAoAAAAAAAAAAAARAAoAAAAAAAAAAAASAAoAAAAAAAAAAAATAAoAAAAAAAAAAAAAAAsAAAAAAAAAAAABAAsAAAAAAAAAAAACAAsAAAAAAAAAAAADAAsAAAAAAAAAAAAEAAsAAAAAAAAAAAAFAAsAAAAAAAAAAAAGAAsAAAAAAAAAAAAHAAsAAAAAAAAAAAAIAAsAAAAAAAAAAAAJAAsAAAAAAAAAAAAKAAsAAAAAAAAAAAALAAsAAAAAAAAAAAAMAAsAAAAAAAAAAAANAAsAAAAAAAAAAAAOAAsAAAAAAAAAAAAPAAsAAAAAAAAAAAAQAAsAAAAAAAAAAAARAAsAAAAAAAAAAAASAAsAAAAAAAAAAAATAAsAAAAAAAAAAAA=")
+tile_set = SubResource("TileSet_0tnpc")
+
+[node name="Camera" type="Camera2D" parent="." unique_id=835562184]
+unique_name_in_owner = true
+position = Vector2(640, 360)
+
+[node name="Player" parent="." unique_id=1899851139 instance=ExtResource("3_player")]
+unique_name_in_owner = true
+position = Vector2(640, 360)
+
+[node name="Enemies" type="Node2D" parent="." unique_id=1854603065]
+unique_name_in_owner = true
+
+[node name="DebrisFieldSpawner" type="Node2D" parent="." unique_id=1371430967]
+unique_name_in_owner = true
+script = ExtResource("2_debris")
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1944228728]
+
+[node name="ScoreLabel" type="Label" parent="HUD" unique_id=1745534]
+unique_name_in_owner = true
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 300.0
+offset_bottom = 46.0
+theme_override_font_sizes/font_size = 30
+text = "Score: 0"
+
+[node name="WaveLabel" type="Label" parent="HUD" unique_id=995198360]
+unique_name_in_owner = true
+offset_left = 16.0
+offset_top = 52.0
+offset_right = 300.0
+offset_bottom = 78.0
+theme_override_font_sizes/font_size = 20
+text = "Wave: 1"
+
+[node name="ComboLabel" type="Label" parent="HUD" unique_id=1491281138]
+unique_name_in_owner = true
+offset_left = 16.0
+offset_top = 84.0
+offset_right = 300.0
+offset_bottom = 116.0
+theme_override_font_sizes/font_size = 26
+
+[node name="Hearts" type="HBoxContainer" parent="HUD" unique_id=1369019036]
+unique_name_in_owner = true
+offset_left = 16.0
+offset_top = 122.0
+offset_right = 200.0
+offset_bottom = 154.0
+theme_override_constants/separation = 6
+
+[node name="ShieldIcon" type="TextureRect" parent="HUD" unique_id=1936173011]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -150.0
+offset_top = 64.0
+offset_right = -104.0
+offset_bottom = 110.0
+grow_horizontal = 0
+texture = ExtResource("4_shieldtex")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MagnetIcon" type="TextureRect" parent="HUD" unique_id=537410640]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -104.0
+offset_top = 64.0
+offset_right = -58.0
+offset_bottom = 110.0
+grow_horizontal = 0
+texture = ExtResource("5_magnetex")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MenuButton" type="Button" parent="HUD" unique_id=768937786]
+unique_name_in_owner = true
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -150.0
+offset_top = 12.0
+offset_right = -16.0
+offset_bottom = 52.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 18
+text = "Menu"
+
+[node name="Banner" type="Label" parent="HUD" unique_id=167847359]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -80.0
+offset_right = 300.0
+offset_bottom = 80.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 64
+text = "WAVE 1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HitTint" type="ColorRect" parent="HUD" unique_id=221706353]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0, 0, 0)
+
+[node name="GameOver" type="CanvasLayer" parent="." unique_id=70316299]
+
+[node name="GameOverPanel" type="Control" parent="GameOver" unique_id=283880953]
+unique_name_in_owner = true
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="GameOver/GameOverPanel" unique_id=822489964]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+
+[node name="Center" type="CenterContainer" parent="GameOver/GameOverPanel" unique_id=440744366]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="GameOver/GameOverPanel/Center" unique_id=919848064]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Title" type="Label" parent="GameOver/GameOverPanel/Center/VBox" unique_id=1517744111]
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+text = "GAME OVER"
+horizontal_alignment = 1
+
+[node name="FinalScore" type="Label" parent="GameOver/GameOverPanel/Center/VBox" unique_id=1541868344]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "Score: 0"
+horizontal_alignment = 1
+
+[node name="FinalBest" type="Label" parent="GameOver/GameOverPanel/Center/VBox" unique_id=1554992205]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Best: 0"
+horizontal_alignment = 1
+
+[node name="RetryButton" type="Button" parent="GameOver/GameOverPanel/Center/VBox" unique_id=1646440105]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 52)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Play Again"
+
+[node name="GameOverMenuButton" type="Button" parent="GameOver/GameOverPanel/Center/VBox" unique_id=329137696]
+custom_minimum_size = Vector2(240, 52)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Menu"
+
+[node name="UpgradeLayer" type="CanvasLayer" parent="." unique_id=80219901]
+
+[node name="UpgradePanel" type="Control" parent="UpgradeLayer" unique_id=1299340617]
+unique_name_in_owner = true
+process_mode = 3
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("6_upgradepanel")
+
+[node name="Dim" type="ColorRect" parent="UpgradeLayer/UpgradePanel" unique_id=1547769892]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.03, 0.05, 0.1, 0.82)
+
+[node name="Center" type="CenterContainer" parent="UpgradeLayer/UpgradePanel" unique_id=1447021962]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="UpgradeLayer/UpgradePanel/Center" unique_id=1869328655]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="Title" type="Label" parent="UpgradeLayer/UpgradePanel/Center/VBox" unique_id=1188361339]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+text = "CHOOSE AN UPGRADE"
+horizontal_alignment = 1
+
+[node name="Cards" type="HBoxContainer" parent="UpgradeLayer/UpgradePanel/Center/VBox" unique_id=1421412515]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 28
+alignment = 1
+
+[node name="Hint" type="Label" parent="UpgradeLayer/UpgradePanel/Center/VBox" unique_id=975220334]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.68, 0.8, 1)
+theme_override_font_sizes/font_size = 18
+text = "Press 1 / 2 / 3 or click to choose"
+horizontal_alignment = 1
+
+[connection signal="pressed" from="GameOver/GameOverPanel/Center/VBox/GameOverMenuButton" to="." method="_to_menu"]

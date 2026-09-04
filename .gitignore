@@ -1,0 +1,17 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Build artifacts
+/builds/
+builds.rar
+
+# Local tooling state
+.ziva/
+addons/.ziva_update_temp.zip
+
+# Ziva runtime binary exceeds GitHub's 100 MB per-file limit
+/addons/ziva_agent/zivacode/
+
+# Editor/tooling backup files
+**/~*
