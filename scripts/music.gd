@@ -26,16 +26,26 @@ var _active := ""        # key of the track currently fading in / playing
 
 func _ready() -> void:
 	for key: String in TRACKS:
-		var s := load(TRACKS[key]) as AudioStreamWAV
-		if s != null:
-			# Enable a seamless whole-file loop (works regardless of how the
-			# .wav was imported/compressed).
-			s.loop_mode = AudioStreamWAV.LOOP_FORWARD
-			s.loop_begin = 0
-			s.loop_end = int(s.get_length() * s.mix_rate)
-		_streams[key] = s
+		_streams[key] = _load_track(TRACKS[key])
 	_players.append(_make_player())
 	_players.append(_make_player())
+
+## Load a wav as a looping AudioStreamWAV. res:// paths go through the normal
+## (imported) loader; user:// paths (runtime-synthesized tier fallbacks) are
+## read raw via AudioStreamWAV.load_from_file, which needs no import step.
+func _load_track(path: String) -> AudioStreamWAV:
+	var s: AudioStreamWAV = null
+	if path.begins_with("res://"):
+		s = load(path) as AudioStreamWAV
+	else:
+		s = AudioStreamWAV.load_from_file(path)
+	if s != null:
+		# Enable a seamless whole-file loop (works regardless of how the
+		# .wav was imported/compressed).
+		s.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		s.loop_begin = 0
+		s.loop_end = int(s.get_length() * s.mix_rate)
+	return s
 
 func _make_player() -> AudioStreamPlayer:
 	var p := AudioStreamPlayer.new()
@@ -64,6 +74,23 @@ func play(key: String, fade := FADE_TIME) -> void:
 	tw.tween_property(outgoing, "volume_db", -80.0, fade)
 	tw.chain().tween_callback(func() -> void:
 		outgoing.stop())
+
+## Crossfade to the battle track for `tier` (1..10). Tier 1 is the classic
+## battle theme; higher tiers are procedural intensifications that resolve via
+## ChiptuneGenerator (a committed res:// file when present, otherwise one
+## synthesized per session). Routes through play() so the no-op-if-active guard
+## and the shared crossfade/crossfade-pool behavior are identical to battle/boss.
+func play_battle_tier(tier: int, fade := FADE_TIME) -> void:
+	if tier <= 1:
+		play("battle", fade)
+		return
+	var key := "battle_tier_%d" % tier
+	if not _streams.has(key):
+		var s := _load_track(ChiptuneGenerator.ensure_battle_tier(tier))
+		if s == null:
+			return
+		_streams[key] = s
+	play(key, fade)
 
 ## Fade everything out (e.g. before quitting or on a hard mute).
 func stop(fade := FADE_TIME) -> void:

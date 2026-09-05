@@ -4,6 +4,10 @@ extends Node
 ## 2) All 4 tracks load as loopable AudioStreamWAV
 ## 3) Music.play() crossfades between tracks (menu -> battle -> boss)
 ## 4) main_menu.tscn boots cleanly (its _ready calls Music.play("menu"))
+## 5) battle-intensity tiers: tier 1 reuses battle, tiers load/loop via
+##    play_battle_tier(), re-visiting an unlocked tier is a no-op
+## 6) ChiptuneGenerator caching: committed tier files are preferred, and a
+##    missing tier renders at most once per session (no duplicate generation)
 
 var _failures := 0
 
@@ -56,6 +60,59 @@ func test_music() -> void:
 	_check(menu_node != null and is_instance_valid(menu_node), "main_menu instantiates and runs")
 	_check(music._active == "menu", "menu boot switched music to menu (active=%s)" % music._active)
 	menu_node.queue_free()
+
+	# --- 5) battle-intensity tiers ---
+	# Tier 1 reuses the committed battle track: no new stream, no render.
+	music.play_battle_tier(1)
+	await get_tree().process_frame
+	_check(music._active == "battle", "play_battle_tier(1) switches to battle (active=%s)" % music._active)
+	_check(music._streams.size() == 4, "tier 1 reuses the existing battle stream (no new stream)")
+	var render_base: int = ChiptuneGenerator._render_count
+	music.play_battle_tier(1)
+	await get_tree().process_frame
+	_check(music._active == "battle", "re-visiting tier 1 is a no-op")
+	_check(ChiptuneGenerator._render_count == render_base, "tier 1 never triggers a render")
+
+	# Tier 2 loads through Music as a loopable stream and crossfades in.
+	music.play_battle_tier(2)
+	await get_tree().process_frame
+	_check(music._active == "battle_tier_2", "play_battle_tier(2) crossfades to battle_tier_2 (active=%s)" % music._active)
+	_check(music._streams.size() == 5, "tier 2 stream registered on demand (%d streams)" % music._streams.size())
+	var t2: AudioStreamWAV = music._streams.get("battle_tier_2")
+	_check(t2 is AudioStreamWAV, "battle_tier_2 loads as AudioStreamWAV")
+	if t2 is AudioStreamWAV:
+		_check(t2.loop_mode == AudioStreamWAV.LOOP_FORWARD, "battle_tier_2 loop-enabled")
+		_check(t2.loop_end > 0, "battle_tier_2 has a loop length (%.2fs)" % t2.get_length())
+	# Re-visiting an unlocked tier is a no-op and never re-generates.
+	var before_2: int = ChiptuneGenerator._render_count
+	music.play_battle_tier(2)
+	await get_tree().process_frame
+	_check(music._active == "battle_tier_2", "re-visiting tier 2 is a no-op")
+	_check(ChiptuneGenerator._render_count == before_2, "re-visiting tier 2 did not re-generate")
+
+	# --- 6) generator caching: committed files are preferred; a missing tier
+	#       renders at most once per session.
+	var c0: int = ChiptuneGenerator._render_count
+	var p2: String = ChiptuneGenerator.ensure_battle_tier(2)
+	_check(ChiptuneGenerator._render_count == c0, "committed tier 2 file used, no runtime render")
+	_check(ResourceLoader.exists(p2), "tier 2 resolves to a committed/imported file (%s)" % p2)
+	# Dedicated probe tier (no committed file) to exercise the runtime fallback
+	# deterministically: clear any stale per-run cache/user:// file from an
+	# earlier run, then confirm a missing tier renders exactly once per session.
+	const PROBE_TIER := 42
+	ChiptuneGenerator._rendered_tiers.erase(PROBE_TIER)
+	var stale_path := "user://nono_music/battle_tier_%d.wav" % PROBE_TIER
+	if FileAccess.file_exists(stale_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(stale_path))
+	var c1: int = ChiptuneGenerator._render_count
+	var pa: String = ChiptuneGenerator.ensure_battle_tier(PROBE_TIER)
+	_check(ChiptuneGenerator._render_count == c1 + 1, "missing tier renders exactly once")
+	var pb: String = ChiptuneGenerator.ensure_battle_tier(PROBE_TIER)
+	_check(pa == pb, "re-visiting a rendered tier returns the same path")
+	_check(ChiptuneGenerator._render_count == c1 + 1, "re-visiting a rendered tier does not re-render")
+	var raw: Variant = AudioStreamWAV.load_from_file(pa)
+	_check(raw is AudioStreamWAV and raw.get_length() > 0.0,
+		"runtime-rendered tier is playable audio (%.2fs)" % (raw.get_length() if raw is AudioStreamWAV else -1.0))
 
 	_finish()
 

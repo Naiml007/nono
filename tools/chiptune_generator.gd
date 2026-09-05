@@ -16,6 +16,22 @@ extends RefCounted
 const SR := 22050                      # Sample rate. Lower rate = chunkier, more "8-bit".
 const OUT_DIR := "res://assets/audio/music"
 
+# --- Procedural battle-intensity tiers ---------------------------------------
+# Waves 1-49 are bucketed every BATTLE_TIER_SIZE waves into BATTLE_TIER_COUNT
+# tiers. Tier 1 is bit-identical to the classic battle_theme (it reuses that
+# committed file); higher tiers add deterministic layers (extra voices, denser
+# percussion), raise BPM toward the boss theme's tempo, and shift key up
+# late-run. Each tier is generated at most once per session.
+const BATTLE_TIER_COUNT := 10
+const BATTLE_TIER_SIZE := 5
+const BATTLE_TIER_BPM := [144.0, 150.0, 154.0, 158.0, 162.0, 166.0, 168.0, 168.0, 168.0, 168.0]
+const BATTLE_TIER_KEY := [0, 0, 0, 0, 0, 0, 1, 1, 2, 3]
+
+## tiers already resolved this session (tier -> path); prevents duplicate renders.
+static var _rendered_tiers: Dictionary = {}
+## how many tracks were actually synthesized this session (test hook).
+static var _render_count := 0
+
 # --- Pitch ------------------------------------------------------------------
 
 static func midi_to_hz(m: float) -> float:
@@ -157,6 +173,10 @@ static func _render_drums(master: PackedFloat32Array, drums: Dictionary, bars: i
 	var kick_steps: Array = drums.get("kick", [])
 	var hat_steps: Array = drums.get("hat", [])
 	var snare_steps: Array = drums.get("snare", [])
+	var open_steps: Array = drums.get("open", [])
+	var crash_steps: Array = drums.get("crash", [])
+	var open_burst := _noise_burst(0.12, 30.0, 5005)
+	var crash_burst := _noise_burst(0.4, 20.0, 31337)
 	for b in bars:
 		for s: int in kick_steps:
 			_place(master, kick_burst, (16 * b + s) * step_dur, 0.9)
@@ -164,6 +184,10 @@ static func _render_drums(master: PackedFloat32Array, drums: Dictionary, bars: i
 			_place(master, hat_burst, (16 * b + s) * step_dur, 0.28)
 		for s: int in snare_steps:
 			_place(master, snare_burst, (16 * b + s) * step_dur, 0.5)
+		for s: int in open_steps:
+			_place(master, open_burst, (16 * b + s) * step_dur, 0.25)
+	for s: int in crash_steps:
+		_place(master, crash_burst, s * step_dur, 0.5)
 
 ## Peak-normalize and add tiny edge fades so the loop point doesn't click.
 static func _finish(buf: PackedFloat32Array) -> void:
@@ -182,8 +206,9 @@ static func _finish(buf: PackedFloat32Array) -> void:
 		buf[i] *= e
 		buf[buf.size() - 1 - i] *= e
 
-## Render a whole song dictionary and write it to OUT_DIR/<name>.wav.
-static func _render_song(song: Dictionary) -> void:
+## Render a whole song dictionary and write it to OUT_DIR/<name>.wav, or to
+## `path` when given (e.g. the user:// runtime fallback for a missing tier).
+static func _render_song(song: Dictionary, path := "") -> void:
 	var bpm: float = song["bpm"]
 	var bars: int = int(song["bars"])
 	var step_dur: float = 60.0 / bpm / 4.0
@@ -197,8 +222,10 @@ static func _render_song(song: Dictionary) -> void:
 	if song.has("drums"):
 		_render_drums(master, song["drums"], bars, step_dur)
 	_finish(master)
-	_write_wav("%s/%s.wav" % [OUT_DIR, song["name"]], master)
-	print("Wrote %s (%.2fs)" % [song["name"], total_sec])
+	if path.is_empty():
+		path = "%s/%s.wav" % [OUT_DIR, song["name"]]
+	_write_wav(path, master)
+	print("Wrote %s (%.2fs)" % [path.get_file(), total_sec])
 
 # --- WAV output ---------------------------------------------------------------
 
@@ -259,29 +286,100 @@ static func _song_menu() -> void:
 
 static func _song_battle() -> void:
 	# 144 BPM, A minor. Am - F - C - G. Driving chase music for the waves.
-	var bass := _bars([
-		_bass_oct(33), _bass_oct(29), _bass_oct(36), _bass_oct(31),
-	])
+	# Tier 1 must stay bit-identical to the classic theme, so it delegates to
+	# the shared parameterized builder - "same song, more intense" by construction.
+	# It renders to the classic battle_theme.wav (tier 1 never gets its own file).
+	_render_song(_build_battle(1), battle_tier_path(1))
+
+## Shared battle builder. Tier 1 reproduces the classic battle_theme exactly;
+## higher tiers add deterministic layers (extra voices, denser percussion), raise
+## BPM toward the boss theme's 168, and shift key up late-run. The base motif
+## (bass octaves, 16th arpeggio, lead melody) is never replaced - only thickened.
+static func _build_battle(tier: int) -> Dictionary:
+	var t := clampi(tier, 1, BATTLE_TIER_COUNT)
+	var k: int = _tier_key_shift(t)
+	var bpm: float = _tier_bpm(t)
+	var l2 := t >= 2   # melody octave-up shimmer
+	var l3 := t >= 3   # snare on all 4 beats + open-hat downbeat accent
+	var l4 := t >= 4   # melody octave-down fullness
+	var l5 := t >= 5   # sustained root+5th block-chord pad
+	var l6 := t >= 6   # double-time kick (8ths)
+	var l8 := t >= 8   # driving root/5th/octave bass
+	var l9 := t >= 9   # crash accent on bars 1 & 3
+
+	var bass: Array
+	if l8:
+		bass = _bars([
+			_bass_drive(33 + k), _bass_drive(29 + k), _bass_drive(36 + k), _bass_drive(31 + k),
+		])
+	else:
+		bass = _bars([
+			_bass_oct(33 + k), _bass_oct(29 + k), _bass_oct(36 + k), _bass_oct(31 + k),
+		])
 	var arp := _bars([
-		_arp_chord(57, 64, 69, 64), _arp_chord(53, 60, 65, 60),
-		_arp_chord(60, 67, 72, 67), _arp_chord(55, 62, 67, 62),
+		_arp_chord(57 + k, 64 + k, 69 + k, 64 + k), _arp_chord(53 + k, 60 + k, 65 + k, 60 + k),
+		_arp_chord(60 + k, 67 + k, 72 + k, 67 + k), _arp_chord(55 + k, 62 + k, 67 + k, 62 + k),
 	])
 	var melody := _bars([
-		[[0, 81, 1], [1, 84, 1], [2, 81, 1], [4, 79, 2], [8, 76, 2], [10, 79, 1], [12, 81, 2]],
-		[[0, 77, 2], [2, 81, 2], [4, 84, 2], [8, 81, 2], [10, 79, 1], [12, 77, 1], [14, 74, 2]],
-		[[0, 76, 2], [2, 72, 1], [4, 76, 2], [8, 79, 1], [9, 81, 1], [10, 84, 2], [12, 81, 1], [14, 79, 1]],
-		[[0, 79, 2], [2, 74, 1], [4, 79, 1], [5, 83, 1], [8, 86, 2], [10, 83, 2], [12, 81, 1], [13, 83, 1], [14, 84, 2]],
+		[[0, 81 + k, 1], [1, 84 + k, 1], [2, 81 + k, 1], [4, 79 + k, 2], [8, 76 + k, 2], [10, 79 + k, 1], [12, 81 + k, 2]],
+		[[0, 77 + k, 2], [2, 81 + k, 2], [4, 84 + k, 2], [8, 81 + k, 2], [10, 79 + k, 1], [12, 77 + k, 1], [14, 74 + k, 2]],
+		[[0, 76 + k, 2], [2, 72 + k, 1], [4, 76 + k, 2], [8, 79 + k, 1], [9, 81 + k, 1], [10, 84 + k, 2], [12, 81 + k, 1], [14, 79 + k, 1]],
+		[[0, 79 + k, 2], [2, 74 + k, 1], [4, 79 + k, 1], [5, 83 + k, 1], [8, 86 + k, 2], [10, 83 + k, 2], [12, 81 + k, 1], [13, 83 + k, 1], [14, 84 + k, 2]],
 	])
-	var song := {
-		"name": "battle_theme", "bpm": 144.0, "bars": 4,
-		"voices": [
-			{"wave": "triangle", "vol": 0.50, "seq": bass},
-			{"wave": "square25", "vol": 0.16, "seq": arp},
-			{"wave": "square", "vol": 0.22, "seq": melody},
-		],
-		"drums": {"kick": [0, 4, 8, 12], "snare": [4, 12], "hat": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]},
+	var voices: Array = [
+		{"wave": "triangle", "vol": 0.50, "seq": bass},
+		{"wave": "square25", "vol": 0.16, "seq": arp},
+		{"wave": "square", "vol": 0.22, "seq": melody},
+	]
+	if l2:
+		voices.append({"wave": "square", "vol": 0.09, "seq": _transpose(melody, 12)})
+	if l4:
+		voices.append({"wave": "square", "vol": 0.10, "seq": _transpose(melody, -12)})
+	if l5:
+		voices.append({"wave": "square25", "vol": 0.10, "seq": _bars([
+			_block_chords(45 + k), _block_chords(41 + k), _block_chords(48 + k), _block_chords(43 + k),
+		])})
+	var drums := {
+		"kick": [0, 2, 4, 6, 8, 10, 12, 14] if l6 else [0, 4, 8, 12],
+		"snare": [0, 4, 8, 12] if l3 else [4, 12],
+		"hat": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
 	}
-	_render_song(song)
+	if l3:
+		drums["open"] = [0]
+	if l9:
+		drums["crash"] = [0, 32]   # downbeats of bars 1 & 3
+	return {
+		"name": "battle_tier_%d" % t, "bpm": bpm, "bars": 4,
+		"voices": voices, "drums": drums,
+	}
+
+static func _tier_bpm(tier: int) -> float:
+	return BATTLE_TIER_BPM[clampi(tier - 1, 0, BATTLE_TIER_COUNT - 1)]
+
+static func _tier_key_shift(tier: int) -> int:
+	return BATTLE_TIER_KEY[clampi(tier - 1, 0, BATTLE_TIER_COUNT - 1)]
+
+## Transpose a flat [step, midi, len] sequence by `shift` semitones.
+static func _transpose(seq: Array, shift: int) -> Array:
+	var out: Array = []
+	for e: Array in seq:
+		out.append([e[0], int(e[1]) + shift, e[2]])
+	return out
+
+## Driving root / fifth / octave / fifth 8th-note bass for one bar.
+static func _bass_drive(root: int) -> Array:
+	var pat: Array = []
+	for i in 8:
+		pat.append([i * 2, root + [0, 7, 12, 7][i % 4], 2])
+	return pat
+
+## Sustained root + fifth quarter-note block chord (2 notes at once) for one bar.
+static func _block_chords(root: int) -> Array:
+	var pat: Array = []
+	for s in [0, 8]:
+		pat.append([s, root, 4])
+		pat.append([s, root + 7, 4])
+	return pat
 
 static func _song_boss() -> void:
 	# 168 BPM, A minor with a tense pedal bass. Am - F - G - E(maj).
@@ -336,10 +434,50 @@ static func _song_game_over() -> void:
 	}
 	_render_song(song)
 
+# --- Battle tier file resolution --------------------------------------------
+
+## File base name for a battle tier. Tier 1 intentionally reuses the committed
+## battle_theme.wav - it is the classic track, no extra copy is ever written.
+static func battle_tier_name(tier: int) -> String:
+	return "battle_theme" if tier <= 1 else "battle_tier_%d" % tier
+
+## res:// path a tier's committed wav would live at.
+static func battle_tier_path(tier: int) -> String:
+	return "%s/%s.wav" % [OUT_DIR, battle_tier_name(tier)]
+
+## Resolve the wav to play for a battle tier. Order of preference:
+##   1. committed + imported res:// file (ResourceLoader.exists) - the shipped path;
+##   2. a tier already generated this session (per-run cache - never regenerated);
+##   3. synthesize once into user:// (writable, no import needed) as a fallback.
+static func ensure_battle_tier(tier: int) -> String:
+	if tier < 1:
+		tier = 1
+	if _rendered_tiers.has(tier):
+		return _rendered_tiers[tier]
+	var res_path := battle_tier_path(tier)
+	if ResourceLoader.exists(res_path):
+		_rendered_tiers[tier] = res_path
+		return res_path
+	var user_path := "user://nono_music/battle_tier_%d.wav" % tier
+	if not FileAccess.file_exists(user_path):
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://nono_music"))
+		_render_song(_build_battle(tier), user_path)
+		_render_count += 1
+	_rendered_tiers[tier] = user_path
+	return user_path
+
+## Render a tier's committed file into OUT_DIR (used by generate_all).
+static func _render_battle_tier_file(tier: int) -> void:
+	if tier <= 1:
+		return   # tier 1 IS battle_theme.wav - never write a duplicate
+	_render_song(_build_battle(tier), battle_tier_path(tier))
+
 static func generate_all() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT_DIR))
 	_song_menu()
 	_song_battle()
+	for tier in range(2, BATTLE_TIER_COUNT + 1):
+		_render_battle_tier_file(tier)
 	_song_boss()
 	_song_game_over()
 	print("All chiptune tracks generated.")
