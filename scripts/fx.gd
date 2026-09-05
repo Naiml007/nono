@@ -51,10 +51,9 @@ func burst(at: Vector2, color: Color, amount: int = 14, speed: float = 240.0, li
 	p.color = color
 	p.z_index = 50
 	_world.add_child(p)
-	var t := get_tree().create_timer(lifetime + 0.4)
-	t.timeout.connect(func() -> void:
-		if is_instance_valid(p):
-			p.queue_free())
+	# One-shot bursts free themselves via the particle system's `finished`
+	# signal (emitted once all particles die) — no per-burst SceneTreeTimer.
+	p.finished.connect(p.queue_free)
 
 ## Show a floating score/text popup that rises and fades out.
 func popup(at: Vector2, text: String, color: Color, size: int = 22) -> void:

@@ -7,6 +7,9 @@ extends Node
 
 var _failures := 0
 
+func _ready() -> void:
+	test_music()
+
 func test_music() -> void:
 	await get_tree().process_frame
 
@@ -65,3 +68,5 @@ func _check(ok: bool, what: String) -> void:
 
 func _finish() -> void:
 	print("MUSIC TEST ", "PASSED" if _failures == 0 else "FAILED (%d)" % _failures)
+	# Exit cleanly so repeated/CI runs don't accumulate a lingering scene tree.
+	get_tree().quit()

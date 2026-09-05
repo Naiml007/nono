@@ -107,11 +107,11 @@ settings toggles rebind at runtime.
 `game.gd` (`class_name Game`) drives everything:
 
 1. `_ready()` → `GameState.reset_run()`, `Fx.setup()`, wire signals, `Music.play("battle")`, `_start_wave(1)`.
-2. Each wave: shows banner, scatters coins (`_scatter_coins` → DebrisFieldSpawner), spawns `2 + wave` enemies over time, staggered from screen edges (`_edge_spawn_pos`).
+2. Each wave: shows banner, clears any leftover hearts/coins from the previous wave (`_clear_leftover_hearts`/`_clear_leftover_coins`), scatters a fresh coin field (`_scatter_coins` → DebrisFieldSpawner), spawns `2 + wave` enemies over time, staggered from screen edges (`_edge_spawn_pos`).
 3. Enemies (group `"enemies"`) home toward the player with a sine wobble; contact kills them but damages the player unless dashing/invulnerable/shielded.
 4. Coins (group `"coins"`) give `(1 + value_bonus) * combo_multiplier` score; combo multiplier = `1 + floor(combo / 4)` capped at 5, resets 3s after the last pickup.
 5. When all enemies die → `_start_next_wave()` → 1s pause → `_offer_upgrades()` (tree pauses, 3 random buff cards, wait for `upgrade_chosen`) → next wave.
-6. Enemies/power-ups drop: 12% magnet, 10% shield, 7% heart (heart pickups are group `"heart_pickup"` and are force-cleared at each wave start).
+6. Enemies/power-ups drop: 12% magnet, 10% shield, 7% heart (heart pickups are group `"heart_pickup"`; both hearts and uncollected coins are force-cleared at each wave start so the arena's node count stays flat over a long run).
 7. Wave 50 → boss wave (`_start_boss_wave`): boss spawns above arena, `BossCam` priority raised to 40, boss health bar shown. On death: +500 score, power-up drops, `let_me_solo_her` achievement if a single source dealt all damage, boss cam priority reset.
 8. Player death → game-over panel (score + best), `GameState.save_best()`, retry reloads scene, Menu unpauses and switches scene.
 

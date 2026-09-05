@@ -124,6 +124,7 @@ func _wire() -> void:
 
 func _start_wave(n: int) -> void:
 	_clear_leftover_hearts()
+	_clear_leftover_coins()
 	if n == BOSS_WAVE:
 		_start_boss_wave()
 		return
@@ -219,6 +220,14 @@ func _on_boss_died(boss: Boss) -> void:
 ## begins so they don't carry over from the previous wave.
 func _clear_leftover_hearts() -> void:
 	for node in get_tree().get_nodes_in_group("heart_pickup"):
+		if is_instance_valid(node):
+			node.queue_free()
+
+## Uncollected energy cores persist too, and each wave scatters a fresh field.
+## Clearing leftovers at the wave boundary keeps the arena's node count flat
+## over a long run instead of accumulating ~20 coins per wave forever.
+func _clear_leftover_coins() -> void:
+	for node in get_tree().get_nodes_in_group("coins"):
 		if is_instance_valid(node):
 			node.queue_free()
 
