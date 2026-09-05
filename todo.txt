@@ -1,1 +1,6 @@
-fix: windows size
+fix: windows size  [DONE] stretch mode canvas_items + aspect keep; arena stays 1280x720 logical, camera limits/clamp in sync
+
+fix needed:
+Boss HP low need more  [DONE] boss max_hp 18 -> 35
+Achievement dekhar jonno time thake na  [DONE] toast hold 2.4s -> 4.0s (fade 0.4 -> 0.6)
+loots onek compared to loot er ability strength  [DONE] buffs strengthened: speed +20%, dash -25% cd/+35% dist, magnet +110, combo +2s, value +2, magnet pickup 9s, heart +2 HP
