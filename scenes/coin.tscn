@@ -1,10 +1,17 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/coin.gd" id="1_coin"]
 [ext_resource type="Texture2D" path="res://assets/sprites/coin_gold.png" id="2_cointex"]
+[ext_resource type="Shader" path="res://shaders/actor_outline.gdshader" id="3_shader"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_coin"]
 radius = 10.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_outline"]
+shader = ExtResource("3_shader")
+shader_parameter/outline_color = Color(1, 0.8, 0.3, 1)
+shader_parameter/outline_width = 1.0
+shader_parameter/glow = 0.35
 
 [node name="Coin" type="Area2D" groups=["coins"]]
 collision_layer = 0
@@ -13,6 +20,7 @@ script = ExtResource("1_coin")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 texture = ExtResource("2_cointex")
+material = SubResource("ShaderMaterial_outline")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_coin")

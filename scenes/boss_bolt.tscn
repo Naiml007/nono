@@ -1,10 +1,17 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/boss_bolt.gd" id="1_bolt"]
 [ext_resource type="Texture2D" path="res://assets/generated/boss_bolt_frame_0.png" id="2_tex"]
+[ext_resource type="Shader" path="res://shaders/actor_outline.gdshader" id="3_shader"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_body"]
 radius = 9.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_outline"]
+shader = ExtResource("3_shader")
+shader_parameter/outline_color = Color(1, 0.5, 0.2, 1)
+shader_parameter/outline_width = 1.25
+shader_parameter/glow = 0.5
 
 [node name="BossBolt" type="Area2D" groups=["boss_bolts"]]
 collision_layer = 16
@@ -14,6 +21,7 @@ script = ExtResource("1_bolt")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 texture = ExtResource("2_tex")
+material = SubResource("ShaderMaterial_outline")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_body")

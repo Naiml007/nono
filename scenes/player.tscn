@@ -1,10 +1,17 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
 [ext_resource type="Texture2D" path="res://assets/sprites/player_robot.png" id="2_tex"]
+[ext_resource type="Shader" path="res://shaders/actor_outline.gdshader" id="3_shader"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_body"]
 radius = 14.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_outline"]
+shader = ExtResource("3_shader")
+shader_parameter/outline_color = Color(0.45, 0.95, 1, 1)
+shader_parameter/outline_width = 1.25
+shader_parameter/glow = 0.45
 
 [node name="Player" type="CharacterBody2D" groups=["player"]]
 collision_layer = 2
@@ -13,6 +20,7 @@ script = ExtResource("1_player")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 texture = ExtResource("2_tex")
+material = SubResource("ShaderMaterial_outline")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_body")

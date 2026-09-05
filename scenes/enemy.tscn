@@ -1,10 +1,17 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/enemy.gd" id="1_enemy"]
 [ext_resource type="Texture2D" path="res://assets/generated/enemy_drone_frame_0.png" id="2_tex"]
+[ext_resource type="Shader" path="res://shaders/actor_outline.gdshader" id="3_shader"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_body"]
 radius = 14.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_outline"]
+shader = ExtResource("3_shader")
+shader_parameter/outline_color = Color(1, 0.42, 0.15, 1)
+shader_parameter/outline_width = 1.5
+shader_parameter/glow = 0.6
 
 [node name="Enemy" type="CharacterBody2D" groups=["enemies"]]
 collision_layer = 4
@@ -13,6 +20,7 @@ script = ExtResource("1_enemy")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 texture = ExtResource("2_tex")
+material = SubResource("ShaderMaterial_outline")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_body")
