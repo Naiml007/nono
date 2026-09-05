@@ -139,6 +139,9 @@ func _tick_dash_damage(delta: float) -> void:
 		take_damage(1, _player.source_id())
 		_dash_hit_cd = 0.35
 		Fx.burst(global_position, Color(1.0, 0.6, 0.3), 10, 240, 0.35, 0.9)
+		# Weightier beat than a regular kill: small hit-stop + screen shake.
+		Fx.hitstop(0.08)
+		Fx.shake(5.0, 0.18)
 
 func take_damage(amount: int, source_id: int) -> void:
 	if _dead:
@@ -158,6 +161,7 @@ func die(_scored: bool) -> void:
 	set_physics_process(false)
 	Fx.burst(global_position, Color(1.0, 0.5, 0.2), 48, 540, 1.1, 1.7)
 	Fx.shake(14.0, 0.5)
+	Fx.hitstop(0.3)
 	Sfx.play("explode", 0.7, -2.0)
 	boss_died.emit(self)
 	queue_free()

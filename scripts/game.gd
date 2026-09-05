@@ -11,6 +11,7 @@ const ENEMY_SCENE := preload("res://scenes/enemy.tscn")
 const POWERUP_SCENE := preload("res://scenes/power_up.tscn")
 const BOSS_SCENE := preload("res://scenes/boss.tscn")
 const BOSS_WAVE := 50
+const BATTLE_TIER_SIZE := 5   # waves per battle-music intensity tier
 
 const ARENA := Vector2(1280, 720)
 const COMBO_WINDOW := 3.0
@@ -23,7 +24,7 @@ const BUFFS := {
 	"dash": {"name": "Dash Mastery", "desc": "-25% dash cooldown, +35% dash distance", "icon": "res://assets/generated/icon_swirl_frame_0.png", "stack": 3},
 	"magnet": {"name": "Magnet Coil", "desc": "Permanent magnet radius +110", "icon": "res://assets/generated/powerup_magnet_frame_0.png", "stack": 3},
 	"shield": {"name": "Shield Charge", "desc": "Absorb one hit", "icon": "res://assets/generated/powerup_shield_frame_0.png", "one_off": true},
-	"heal": {"name": "Nano Repair", "desc": "Repair +1 HP", "icon": "res://assets/generated/powerup_heart_frame_0.png", "one_off": true},
+	"heal": {"name": "Nano Repair", "desc": "Repair +2 HP", "icon": "res://assets/generated/powerup_heart_frame_0.png", "one_off": true},
 	"maxhp": {"name": "Overclock", "desc": "+1 max HP and repair 1", "icon": "res://assets/generated/powerup_heart_frame_0.png", "one_off": true},
 	"combo": {"name": "Combo Sense", "desc": "Combo window +2.0s", "icon": "res://assets/generated/icon_star_frame_0.png", "stack": 3},
 	"value": {"name": "Coin Value", "desc": "Coins are worth +2 each", "icon": "res://assets/generated/icon_arrow_frame_0.png", "stack": 5},
@@ -57,6 +58,7 @@ const BUFFS := {
 
 var _rng := RandomNumberGenerator.new()
 var _wave := 0
+var _battle_tier := 1   # current battle-music intensity tier (1..10)
 var _alive_enemies := 0
 var _combo := 0
 var _combo_left := 0.0
@@ -67,6 +69,9 @@ var _coin_value_bonus := 0
 var _taken_one_offs: Array[String] = []
 var _stack_counts: Dictionary = {}
 var _current_choices: Array[String] = []
+var _coins_collected := 0
+var _max_combo_mult := 0
+var _hit_this_wave := false
 
 var _heart_tex := preload("res://assets/generated/powerup_heart_frame_0.png")
 var _heart_rects: Array[TextureRect] = []
@@ -130,6 +135,11 @@ func _start_wave(n: int) -> void:
 		return
 	_wave = n
 	GameState.wave = n
+	_hit_this_wave = false
+	if _wave >= 10:
+		Achievements.unlock("wave_10")
+	if _wave >= 25:
+		Achievements.unlock("wave_25")
 	_show_banner("WAVE %d" % n)
 	Sfx.play("wave")
 	_scatter_coins()
@@ -138,9 +148,24 @@ func _start_wave(n: int) -> void:
 	for i in count:
 		_spawn_enemy_later(i * 0.35 + _rng.randf_range(0.0, 0.2))
 	_update_ui()
+	_maybe_switch_battle_tier()
+
+## Battle music intensifies every BATTLE_TIER_SIZE waves: wave -> tier is fully
+## deterministic, and a tier only ever plays once per run (no repeated renders).
+func _battle_tier_for_wave(n: int) -> int:
+	return clampi(1 + floori(float(n - 1) / float(BATTLE_TIER_SIZE)), 1, ChiptuneGenerator.BATTLE_TIER_COUNT)
+
+func _maybe_switch_battle_tier() -> void:
+	if _wave >= BOSS_WAVE:
+		return
+	var tier := _battle_tier_for_wave(_wave)
+	if tier != _battle_tier:
+		_battle_tier = tier
+		Music.play_battle_tier(tier)
 
 func _enemy_count_for_wave(n: int) -> int:
-	return 2 + n
+	# Cap the simultaneous-drone count so late waves stay hard but readable.
+	return mini(2 + n, 24)
 
 func _spawn_enemy_later(delay: float) -> void:
 	var t := get_tree().create_timer(delay)
@@ -169,6 +194,7 @@ func _edge_spawn_pos() -> Vector2:
 func _start_boss_wave() -> void:
 	_wave = BOSS_WAVE
 	GameState.wave = BOSS_WAVE
+	_hit_this_wave = false
 	_show_banner("WAVE 50 — BOSS")
 	Music.play("boss")
 	Sfx.play("wave")
@@ -206,6 +232,9 @@ func _on_boss_died(boss: Boss) -> void:
 	_hide_boss_ui()
 	if boss_cam != null:
 		boss_cam.set("priority", 0)
+	# Endless mode continues past wave 50: hand the music back to the
+	# intensified battle track instead of letting the boss theme play forever.
+	Music.play_battle_tier(_battle_tier)
 	_maybe_drop_powerup(boss.global_position)
 	_maybe_drop_powerup(boss.global_position + Vector2(26, -22))
 	GameState.add_score(500)
@@ -213,6 +242,7 @@ func _on_boss_died(boss: Boss) -> void:
 	if boss.solo_attacker_id() != -1:
 		Achievements.unlock("let_me_solo_her")
 	if _alive_enemies <= 0 and not _game_over and not _pending_wave:
+		_maybe_unlock_untouchable()
 		_pending_wave = true
 		_start_next_wave()
 
@@ -235,8 +265,14 @@ func _on_enemy_died(e: Enemy) -> void:
 	_alive_enemies -= 1
 	_maybe_drop_powerup(e.global_position)
 	if _alive_enemies <= 0 and not _game_over and not _pending_wave:
+		_maybe_unlock_untouchable()
 		_pending_wave = true
 		_start_next_wave()
+
+## "Untouchable" fires when a wave is cleared with zero player hits.
+func _maybe_unlock_untouchable() -> void:
+	if _wave >= 2 and not _hit_this_wave:
+		Achievements.unlock("untouchable")
 
 func _start_next_wave() -> void:
 	await get_tree().create_timer(1.0).timeout
@@ -262,14 +298,28 @@ func _scatter_coins() -> void:
 			c.collected.connect(_on_coin_collected)
 
 func _on_coin_collected(c: Coin) -> void:
+	var prev_mult := _combo_multiplier()
 	_combo += 1
 	_combo_left = _combo_window
 	var mult := _combo_multiplier()
 	var pts := (1 + _coin_value_bonus) * mult
 	GameState.add_score(pts)
 	_update_combo_ui()
+	Fx.burst(c.global_position, Color(1.0, 0.85, 0.25), 6, 150, 0.35, 0.7)
 	Fx.popup(c.global_position, "+%d" % pts, Color(1.0, 0.85, 0.25), 22)
 	Sfx.play("coin", randf_range(0.92, 1.2))
+	# Combo milestone: a distinct audio/visual beat so it's felt, not just read.
+	if mult > prev_mult and mult >= 2:
+		_max_combo_mult = maxi(_max_combo_mult, mult)
+		Fx.popup(player.global_position + Vector2(0, -48), "COMBO x%d!" % mult, Color(1.0, 0.62, 0.2), 30)
+		Fx.burst(player.global_position, Color(1.0, 0.62, 0.2), 14, 260, 0.5, 1.0)
+		Fx.shake(3.0, 0.12)
+		Sfx.play("powerup", 1.05 + 0.08 * mult)
+		if _max_combo_mult >= 5:
+			Achievements.unlock("combo_x5")
+	_coins_collected += 1
+	if _coins_collected >= 100:
+		Achievements.unlock("coins_100")
 	_update_ui()
 
 func _combo_multiplier() -> int:
@@ -407,6 +457,18 @@ func _build_card(id: String) -> Button:
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc_label.add_theme_font_size_override("font_size", 15)
 	box.add_child(desc_label)
+	# Footer chip: makes stack-vs-one-off clarity impossible to miss.
+	var chip := Label.new()
+	chip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	chip.add_theme_font_size_override("font_size", 13)
+	if meta.has("one_off"):
+		chip.text = "ONCE PER RUN"
+		chip.add_theme_color_override("font_color", Color(1.0, 0.82, 0.3))
+	else:
+		var used := int(_stack_counts.get(id, 0))
+		chip.text = "STACK  %d / %d" % [used + 1, int(meta["stack"])]
+		chip.add_theme_color_override("font_color", Color(0.55, 0.95, 1.0))
+	box.add_child(chip)
 	btn.add_child(box)
 	btn.pressed.connect(_on_upgrade_chosen.bind(id))
 	return btn
@@ -436,7 +498,7 @@ func _apply_buff(id: String) -> void:
 			player.has_shield = true
 			player.shield_changed.emit(true)
 		"heal":
-			player.heal(1)
+			player.heal(2)
 		"maxhp":
 			player.increase_max_hp(1)
 			_build_hearts()
@@ -457,15 +519,18 @@ func _apply_buff(id: String) -> void:
 
 func _on_player_hit() -> void:
 	_combo = 0
+	_hit_this_wave = true
 	_update_combo_ui()
 	_flash_tint()
 	Sfx.play("hurt")
 	Fx.shake(8.0, 0.25)
+	Fx.hitstop(0.12)
 
 func _on_player_died() -> void:
 	_game_over = true
 	Fx.burst(player.global_position, Color(1.0, 0.5, 0.3), 42, 460, 1.0, 1.8)
 	Fx.shake(16.0, 0.5)
+	Fx.hitstop(0.28)
 	Sfx.play("gameover")
 	Music.play("gameover")
 	GameState.save_best()

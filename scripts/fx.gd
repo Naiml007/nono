@@ -8,6 +8,8 @@ var _particle_tex: Texture2D
 var _shake_amount := 0.0
 var _shake_dur := 0.0
 var _shake_left := 0.0
+## Hit-stop (brief time freeze) runs on real time so it doesn't freeze itself.
+var _hitstop_until := 0
 
 func setup(world: Node2D, camera: Camera2D) -> void:
 	_world = world
@@ -15,6 +17,12 @@ func setup(world: Node2D, camera: Camera2D) -> void:
 	_particle_tex = load("res://assets/generated/particle_frame_0.png")
 
 func _process(delta: float) -> void:
+	# Hit-stop is managed before the camera guard so it works even if setup()
+	# hasn't run. Engine.time_scale freezes gameplay; we restore on real time.
+	if _hitstop_until > 0:
+		if Time.get_ticks_msec() >= _hitstop_until:
+			_hitstop_until = 0
+			Engine.time_scale = 1.0
 	if _camera == null:
 		return
 	if _shake_left > 0.0:
@@ -28,6 +36,13 @@ func shake(amount: float = 6.0, duration: float = 0.25) -> void:
 	_shake_amount = amount
 	_shake_dur = duration
 	_shake_left = duration
+
+## Freeze the whole game for a short moment (weighty hits). Nested calls extend
+## the freeze rather than cut it short. Restores time_scale on real elapsed time.
+func hitstop(duration: float) -> void:
+	var until := Time.get_ticks_msec() + maxi(1, int(duration * 1000.0))
+	_hitstop_until = maxi(_hitstop_until, until)
+	Engine.time_scale = 0.0
 
 ## Spawn a one-shot particle burst at a world position.
 func burst(at: Vector2, color: Color, amount: int = 14, speed: float = 240.0, lifetime: float = 0.5, scale: float = 1.0) -> void:

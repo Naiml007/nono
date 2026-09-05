@@ -158,6 +158,15 @@ player or run state directly.
   preloaded as `AudioStreamWAV` with `LOOP_FORWARD` set in code. `play()` is
   a no-op if the track is already active — retry/restart never cuts music.
   Keys: `menu`, `battle`, `boss`, `gameover`.
+- **Battle intensity tiers**: battle music intensifies every 5 waves instead of
+  looping one static track. `game.gd` maps wave → tier (`_battle_tier_for_wave`,
+  tiers 1-10, wave 50 = boss) and calls `Music.play_battle_tier(tier)` on tier
+  change. Tier 1 reuses `battle_theme.wav`; tiers 2-10 are committed as
+  `battle_tier_<n>.wav` (preferred), or synthesized once into `user://` via
+  `ChiptuneGenerator.ensure_battle_tier()` if a file is missing (cached per run,
+  never regenerated). After the boss dies the battle tier resumes. All tier
+  switching routes through `play()`/`play_battle_tier`, so crossfade + no-op
+  semantics are shared with `battle`/`boss`.
 - Buses: `Master`, `Music`, `Sfx` (default_bus_layout.tres).
 
 ### FX (juice)
@@ -171,7 +180,7 @@ Requires `Fx.setup(world, camera)` once per scene (done by `game.gd`).
 | File | What | Written by |
 | --- | --- | --- |
 | `user://nono_save.cfg` | Best score (`meta/best`) | `GameState` on death |
-| `user://nono_settings.cfg` | `wasd`, `mouse_dash` | `GameState` on toggle |
+| `user://nono_settings.cfg` | `wasd`, `mouse_dash`, master/music/sfx volume, fullscreen | `GameState` on change |
 | `user://nono_achievements.cfg` | Unlocked id list | `Achievements` |
 
 All are simple `ConfigFile`s.
@@ -185,7 +194,10 @@ Headless test scripts live in `tests/` (each with a tiny `.tscn`):
 | `boss_flow_test.gd` | Boss spawn/HP/dash-damage/bar/cam, solo achievement, heart despawn between waves, polyphonic coin SFX |
 | `camera_test.gd` | Player cam active by default; boss cam priority → zoom 1.2; back to 1.0 |
 | `coin_pos_test.gd` | All spawned coins land inside the 1280×720 arena |
-| `music_test.gd` | 4 tracks load & loop, crossfades work, main menu boots |
+| `music_test.gd` | 4 tracks load & loop, crossfades work, main menu boots; battle tiers load/loop and revisiting a tier never re-renders |
+| `upgrade_panel_test.gd` | Upgrade offer: exactly 3 cards, pause/unpause, buff applied once, STACK/ONCE-PER-RUN chips, out-of-range index ignored |
+| `progress_persistence_test.gd` | Settings round-trip (volume/fullscreen), corrupted/missing file fallbacks, achievement persistence, reset_progress keeps settings |
+| `smoke_test.gd` | Wave 1→50 boss kill→game over flow, score+best labels, retry reset, menu unpause |
 
 Run any test by running its `.tscn` (the `_ready` runs assertions, prints
 `PASS/FAIL`, and calls `get_tree().quit()`). They instantiate `game.tscn`
@@ -196,6 +208,9 @@ the scene headlessly.
 
 - `tools/chiptune_generator.gd` (`class_name ChiptuneGenerator`): one-shot
   NES-style synth that renders the music wavs into `assets/audio/music/`.
+  `generate_all()` also emits the battle tiers (`battle_tier_2..10.wav`) via the
+  shared `_build_battle(tier)` builder (tier 1 = `battle_theme.wav`). It also
+  exposes `ensure_battle_tier(tier)` used by the game as a runtime fallback.
   Already committed output; regenerate intentionally, not on every run.
 - `addons/GDQuest_GDScript_formatter`: code formatter plugin (optional use).
 

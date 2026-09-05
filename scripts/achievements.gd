@@ -10,6 +10,26 @@ const ACHIEVEMENTS := {
 		"name": "Let Me Solo Her",
 		"desc": "Defeat the Wave 50 boss without help.",
 	},
+	"wave_10": {
+		"name": "Marathoner",
+		"desc": "Reach wave 10 in a single run.",
+	},
+	"wave_25": {
+		"name": "Veteran",
+		"desc": "Reach wave 25 in a single run.",
+	},
+	"combo_x5": {
+		"name": "Combo Machine",
+		"desc": "Hit a x5 score multiplier.",
+	},
+	"coins_100": {
+		"name": "Coin Hoarder",
+		"desc": "Collect 100 energy cores in one run.",
+	},
+	"untouchable": {
+		"name": "Untouchable",
+		"desc": "Clear a wave without taking a hit.",
+	},
 }
 
 var _unlocked: Dictionary = {}
@@ -56,11 +76,19 @@ func save_unlocked() -> void:
 	cfg.save(SAVE_PATH)
 
 func load_unlocked() -> void:
+	_unlocked.clear()
 	var cfg := ConfigFile.new()
 	if cfg.load(SAVE_PATH) == OK:
-		var ids: Array = cfg.get_value("achievements", "unlocked", [])
-		for id in ids:
-			_unlocked[str(id)] = true
+		var ids: Variant = cfg.get_value("achievements", "unlocked", [])
+		if ids is Array:
+			for id in ids:
+				if ACHIEVEMENTS.has(str(id)):
+					_unlocked[str(id)] = true
+
+## Wipe all unlocks and persist the cleared state. Used by "reset progress".
+func reset() -> void:
+	_unlocked.clear()
+	save_unlocked()
 
 func _show_toast(id: String) -> void:
 	var meta: Dictionary = ACHIEVEMENTS.get(id, {"name": id, "desc": ""})

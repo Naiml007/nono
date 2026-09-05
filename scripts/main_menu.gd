@@ -13,6 +13,15 @@ extends Control
 @onready var settings_overlay: Control = %SettingsOverlay
 @onready var wasd_toggle: CheckButton = %WasdToggle
 @onready var mouse_dash_toggle: CheckButton = %MouseDashToggle
+@onready var master_slider: HSlider = %MasterVolumeSlider
+@onready var music_slider: HSlider = %MusicVolumeSlider
+@onready var sfx_slider: HSlider = %SfxVolumeSlider
+@onready var master_value: Label = %MasterVolumeValue
+@onready var music_value: Label = %MusicVolumeValue
+@onready var sfx_value: Label = %SfxVolumeValue
+@onready var fullscreen_toggle: CheckButton = %FullscreenToggle
+@onready var reset_button: Button = %ResetProgressButton
+@onready var reset_confirm: ConfirmationDialog = %ResetConfirm
 @onready var back_button: Button = %BackButton
 @onready var title_logo: TextureRect = %Logo
 @onready var robot: TextureRect = %Robot
@@ -25,6 +34,13 @@ func _ready() -> void:
 	# Set initial toggle state before connecting so ready-time signal fires are no-ops.
 	wasd_toggle.button_pressed = GameState.wasd_controls
 	mouse_dash_toggle.button_pressed = GameState.mouse_dash
+	fullscreen_toggle.button_pressed = GameState.fullscreen
+	master_slider.value = GameState.master_volume
+	music_slider.value = GameState.music_volume
+	sfx_slider.value = GameState.sfx_volume
+	master_value.text = "%d%%" % roundi(GameState.master_volume * 100)
+	music_value.text = "%d%%" % roundi(GameState.music_volume * 100)
+	sfx_value.text = "%d%%" % roundi(GameState.sfx_volume * 100)
 
 	play_button.pressed.connect(_on_play_pressed)
 	settings_button.pressed.connect(_open_settings)
@@ -34,6 +50,12 @@ func _ready() -> void:
 	achievements_back.pressed.connect(_close_achievements)
 	wasd_toggle.toggled.connect(_on_wasd_toggled)
 	mouse_dash_toggle.toggled.connect(_on_mouse_dash_toggled)
+	master_slider.value_changed.connect(_on_master_volume_changed)
+	music_slider.value_changed.connect(_on_music_volume_changed)
+	sfx_slider.value_changed.connect(_on_sfx_volume_changed)
+	fullscreen_toggle.toggled.connect(_on_fullscreen_toggled)
+	reset_button.pressed.connect(_on_reset_pressed)
+	reset_confirm.confirmed.connect(_on_reset_confirmed)
 
 	best_label.text = "BEST SCORE: %d" % GameState.best_score
 	_update_controls_hint()
@@ -73,6 +95,28 @@ func _on_wasd_toggled(value: bool) -> void:
 func _on_mouse_dash_toggled(value: bool) -> void:
 	GameState.set_mouse_dash(value)
 	_update_controls_hint()
+
+func _on_master_volume_changed(value: float) -> void:
+	GameState.set_master_volume(value)
+	master_value.text = "%d%%" % roundi(value * 100)
+
+func _on_music_volume_changed(value: float) -> void:
+	GameState.set_music_volume(value)
+	music_value.text = "%d%%" % roundi(value * 100)
+
+func _on_sfx_volume_changed(value: float) -> void:
+	GameState.set_sfx_volume(value)
+	sfx_value.text = "%d%%" % roundi(value * 100)
+
+func _on_fullscreen_toggled(value: bool) -> void:
+	GameState.set_fullscreen(value)
+
+func _on_reset_pressed() -> void:
+	reset_confirm.popup_centered()
+
+func _on_reset_confirmed() -> void:
+	GameState.reset_progress()
+	best_label.text = "BEST SCORE: %d" % GameState.best_score
 
 func _update_controls_hint() -> void:
 	var move := "WASD / Arrows" if GameState.wasd_controls else "Arrows"

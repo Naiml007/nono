@@ -13,9 +13,17 @@ var wave: int = 0
 ## Control settings (persisted to user://nono_settings.cfg).
 var wasd_controls: bool = true
 var mouse_dash: bool = true
+## Audio + display settings (persisted in the same file).
+var master_volume: float = 1.0
+var music_volume: float = 1.0
+var sfx_volume: float = 1.0
+var fullscreen: bool = false
 
 const SAVE_PATH := "user://nono_save.cfg"
 const SETTINGS_PATH := "user://nono_settings.cfg"
+const BUS_MASTER := "Master"
+const BUS_MUSIC := "Music"
+const BUS_SFX := "Sfx"
 
 ## Arrow keys always map to movement; WASD is added on top when enabled.
 const ARROW_KEYS := {
@@ -32,6 +40,9 @@ const WASD_KEYS := {
 }
 
 func _ready() -> void:
+	# Window title is set at runtime so we never rename the project (that would
+	# move the user:// data folder and lose saves).
+	DisplayServer.window_set_title("NONO - Endless Space Survival")
 	load_best()
 	load_settings()
 	_setup_input_actions()
@@ -53,18 +64,127 @@ func set_mouse_dash(value: bool) -> void:
 	save_settings()
 	settings_changed.emit()
 
+func set_master_volume(value: float) -> void:
+	if is_equal_approx(master_volume, value):
+		return
+	master_volume = clampf(value, 0.0, 1.0)
+	apply_audio()
+	save_settings()
+	settings_changed.emit()
+
+func set_music_volume(value: float) -> void:
+	if is_equal_approx(music_volume, value):
+		return
+	music_volume = clampf(value, 0.0, 1.0)
+	apply_audio()
+	save_settings()
+	settings_changed.emit()
+
+func set_sfx_volume(value: float) -> void:
+	if is_equal_approx(sfx_volume, value):
+		return
+	sfx_volume = clampf(value, 0.0, 1.0)
+	apply_audio()
+	save_settings()
+	settings_changed.emit()
+
+func set_fullscreen(value: bool) -> void:
+	if fullscreen == value:
+		return
+	fullscreen = value
+	apply_display()
+	save_settings()
+	settings_changed.emit()
+
+## Push the stored volumes onto the audio buses (0 -> -80 dB / effectively muted).
+func apply_audio() -> void:
+	_apply_bus_volume(BUS_MASTER, master_volume)
+	_apply_bus_volume(BUS_MUSIC, music_volume)
+	_apply_bus_volume(BUS_SFX, sfx_volume)
+
+func _apply_bus_volume(bus_name: String, linear: float) -> void:
+	var idx := AudioServer.get_bus_index(bus_name)
+	if idx < 0:
+		return
+	AudioServer.set_bus_volume_db(idx, -80.0 if linear <= 0.0 else linear_to_db(clampf(linear, 0.0001, 1.0)))
+
+## Apply the fullscreen setting to the window (no-op under the headless server).
+func apply_display() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	DisplayServer.window_set_mode(
+		DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED)
+
 func save_settings() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("controls", "wasd", wasd_controls)
 	cfg.set_value("controls", "mouse_dash", mouse_dash)
+	cfg.set_value("audio", "master", master_volume)
+	cfg.set_value("audio", "music", music_volume)
+	cfg.set_value("audio", "sfx", sfx_volume)
+	cfg.set_value("display", "fullscreen", fullscreen)
 	cfg.save(SETTINGS_PATH)
 
+## Read settings back. Every value is type-sanitized and falls back to defaults,
+## so a missing or corrupted user://nono_settings.cfg can never break startup.
+## A missing file resets to defaults rather than trusting whatever in-memory
+## values happen to be there (covers mid-session deletes and re-loads too).
 func load_settings() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS_PATH) != OK:
+		wasd_controls = true
+		mouse_dash = true
+		master_volume = 1.0
+		music_volume = 1.0
+		sfx_volume = 1.0
+		fullscreen = false
+		_apply_wasd_binding()
+		apply_audio()
+		apply_display()
 		return
-	wasd_controls = bool(cfg.get_value("controls", "wasd", true))
-	mouse_dash = bool(cfg.get_value("controls", "mouse_dash", true))
+	wasd_controls = _coerce_bool(cfg.get_value("controls", "wasd", true), true)
+	mouse_dash = _coerce_bool(cfg.get_value("controls", "mouse_dash", true), true)
+	master_volume = _coerce_volume(cfg.get_value("audio", "master", 1.0), 1.0)
+	music_volume = _coerce_volume(cfg.get_value("audio", "music", 1.0), 1.0)
+	sfx_volume = _coerce_volume(cfg.get_value("audio", "sfx", 1.0), 1.0)
+	fullscreen = _coerce_bool(cfg.get_value("display", "fullscreen", false), false)
+	_apply_wasd_binding()
+	apply_audio()
+	apply_display()
+
+## bool coercion that never trusts the stored type (a corrupted string like
+## "false" must not become true).
+func _coerce_bool(value: Variant, default: bool) -> bool:
+	match typeof(value):
+		TYPE_BOOL: return value
+		TYPE_INT: return value != 0
+		TYPE_FLOAT: return value != 0.0
+		TYPE_STRING:
+			var s := (value as String).to_lower().strip_edges()
+			if s in ["true", "1", "yes", "on"]:
+				return true
+			if s in ["false", "0", "no", "off"]:
+				return false
+	return default
+
+func _coerce_volume(value: Variant, default: float) -> float:
+	match typeof(value):
+		TYPE_FLOAT, TYPE_INT:
+			return clampf(float(value), 0.0, 1.0)
+		TYPE_STRING:
+			if (value as String).is_valid_float():
+				return clampf((value as String).to_float(), 0.0, 1.0)
+	return default
+
+## Wipe best score + achievements (preferences/settings are kept). Used by the
+## in-game "reset progress" option and for support/debugging.
+func reset_progress() -> void:
+	best_score = 0
+	save_best()
+	best_changed.emit(best_score)
+	var ach := get_node_or_null("/root/Achievements")
+	if ach != null and ach.has_method("reset"):
+		ach.reset()
 
 # --- Input actions ----------------------------------------------------------
 
@@ -129,4 +249,6 @@ func save_best() -> void:
 func load_best() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SAVE_PATH) == OK:
-		best_score = cfg.get_value("meta", "best", 0)
+		best_score = maxi(0, int(cfg.get_value("meta", "best", 0)))
+	else:
+		best_score = 0

@@ -12,6 +12,7 @@ addons/.ziva_update_temp.zip
 
 # Ziva runtime binary exceeds GitHub's 100 MB per-file limit
 /addons/ziva_agent/zivacode/
+/addons/ziva_agent/bin/
 
 # Editor/tooling backup files
 **/~*

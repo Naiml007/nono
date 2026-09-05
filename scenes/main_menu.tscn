@@ -235,7 +235,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.02, 0.04, 0.08, 0.8)
+color = Color(0.02, 0.04, 0.08, 0.92)
 
 [node name="SettingsCenter" type="CenterContainer" parent="SettingsOverlay" unique_id=2004001856]
 layout_mode = 0
@@ -274,6 +274,137 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
 theme_override_font_sizes/font_size = 22
 text = "Mouse click to dash"
+
+[node name="AudioHeader" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=1023922732]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.8, 0.95, 1)
+theme_override_font_sizes/font_size = 16
+text = "VOLUME"
+horizontal_alignment = 1
+
+[node name="MasterVolumeRow" type="HBoxContainer" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=2099574891]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MasterVolumeName" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MasterVolumeRow" unique_id=486437179]
+custom_minimum_size = Vector2(92, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "Master"
+
+[node name="MasterVolumeSlider" type="HSlider" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MasterVolumeRow" unique_id=1958817629]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.02
+value = 1.0
+
+[node name="MasterVolumeValue" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MasterVolumeRow" unique_id=504750863]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.7, 0.85, 1)
+theme_override_font_sizes/font_size = 16
+text = "100%"
+horizontal_alignment = 2
+
+[node name="MusicVolumeRow" type="HBoxContainer" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=378533364]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MusicVolumeName" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MusicVolumeRow" unique_id=10874255]
+custom_minimum_size = Vector2(92, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "Music"
+
+[node name="MusicVolumeSlider" type="HSlider" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MusicVolumeRow" unique_id=388506265]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.02
+value = 1.0
+
+[node name="MusicVolumeValue" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MusicVolumeRow" unique_id=1115773723]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.7, 0.85, 1)
+theme_override_font_sizes/font_size = 16
+text = "100%"
+horizontal_alignment = 2
+
+[node name="SfxVolumeRow" type="HBoxContainer" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=1855985463]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SfxVolumeName" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SfxVolumeRow" unique_id=806113530]
+custom_minimum_size = Vector2(92, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "SFX"
+
+[node name="SfxVolumeSlider" type="HSlider" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SfxVolumeRow" unique_id=1001606857]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.02
+value = 1.0
+
+[node name="SfxVolumeValue" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SfxVolumeRow" unique_id=76598997]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.7, 0.85, 1)
+theme_override_font_sizes/font_size = 16
+text = "100%"
+horizontal_alignment = 2
+
+[node name="DisplayHeader" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=897253862]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.8, 0.95, 1)
+theme_override_font_sizes/font_size = 16
+text = "DISPLAY"
+horizontal_alignment = 1
+
+[node name="FullscreenToggle" type="CheckButton" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=950651568]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 44)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "Fullscreen"
+
+[node name="DangerHeader" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=199418428]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.8, 0.95, 1)
+theme_override_font_sizes/font_size = 16
+text = "DATA"
+horizontal_alignment = 1
+
+[node name="ResetProgressButton" type="Button" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=649123462]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 44)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.7, 0.7, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "Reset progress"
 
 [node name="BackButton" type="Button" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=900109791]
 unique_name_in_owner = true
@@ -352,3 +483,12 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
 theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_btn_focus")
 text = "BACK"
+
+[node name="ResetConfirm" type="ConfirmationDialog" parent="." unique_id=2100000130]
+unique_name_in_owner = true
+title = "Reset progress?"
+initial_position = 1
+ok_button_text = "Reset"
+dialog_text = "Delete your best score and all achievements?
+
+This cannot be undone."
