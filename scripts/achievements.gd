@@ -91,6 +91,6 @@ func _show_toast(id: String) -> void:
 	tw.set_parallel(true)
 	tw.tween_property(panel, "modulate:a", 1.0, 0.25)
 	tw.tween_property(panel, "position:y", 24.0, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.chain().tween_interval(2.4)
-	tw.tween_property(panel, "modulate:a", 0.0, 0.4)
+	tw.chain().tween_interval(4.0)
+	tw.tween_property(panel, "modulate:a", 0.0, 0.6)
 	tw.tween_callback(layer.queue_free)

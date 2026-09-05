@@ -70,12 +70,16 @@ func _ready() -> void:
 	_check(attacker == 1, "sole attacker tracked (id=%d)" % attacker)
 
 	# --- Kill boss: achievement + score + UI reset + wave advance path ---
+	# All boss-death effects (score, bar hide, cam reset, unlock) fire
+	# synchronously on the boss_died signal, so assert the +500 immediately.
+	# Waiting frames here lets a random magnet power-up (dropped on the pinned
+	# headless player) pull coins and add stray +1s to the score delta.
 	var score_before: int = GameState.score
 	boss.take_damage(boss.hp, attacker)
+	_check(GameState.score - score_before == 500, "boss kill grants +500 score")
 	for i in 20:
 		await get_tree().process_frame
 	_check(Achievements.is_unlocked("let_me_solo_her"), "achievement 'let_me_solo_her' unlocked")
-	_check(GameState.score - score_before == 500, "boss kill grants +500 score")
 	_check(not game.boss_bar.visible, "boss healthbar hidden after death")
 	_check(game.boss_cam.get("priority") == 0, "boss cam priority reset to 0")
 

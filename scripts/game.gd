@@ -19,14 +19,14 @@ const COMBO_STEP := 4   # Coins collected per multiplier step.
 # Wave-clear upgrade pool. "stack" = max times that buff can be stacked;
 # "one_off" = picked at most once per run.
 const BUFFS := {
-	"speed": {"name": "Speed Boost", "desc": "+15% move speed", "icon": "res://assets/generated/icon_bolt_frame_0.png", "stack": 3},
-	"dash": {"name": "Dash Mastery", "desc": "-20% dash cooldown, +30% dash distance", "icon": "res://assets/generated/icon_swirl_frame_0.png", "stack": 3},
-	"magnet": {"name": "Magnet Coil", "desc": "Permanent magnet radius +80", "icon": "res://assets/generated/powerup_magnet_frame_0.png", "stack": 3},
+	"speed": {"name": "Speed Boost", "desc": "+20% move speed", "icon": "res://assets/generated/icon_bolt_frame_0.png", "stack": 3},
+	"dash": {"name": "Dash Mastery", "desc": "-25% dash cooldown, +35% dash distance", "icon": "res://assets/generated/icon_swirl_frame_0.png", "stack": 3},
+	"magnet": {"name": "Magnet Coil", "desc": "Permanent magnet radius +110", "icon": "res://assets/generated/powerup_magnet_frame_0.png", "stack": 3},
 	"shield": {"name": "Shield Charge", "desc": "Absorb one hit", "icon": "res://assets/generated/powerup_shield_frame_0.png", "one_off": true},
 	"heal": {"name": "Nano Repair", "desc": "Repair +1 HP", "icon": "res://assets/generated/powerup_heart_frame_0.png", "one_off": true},
 	"maxhp": {"name": "Overclock", "desc": "+1 max HP and repair 1", "icon": "res://assets/generated/powerup_heart_frame_0.png", "one_off": true},
-	"combo": {"name": "Combo Sense", "desc": "Combo window +1.5s", "icon": "res://assets/generated/icon_star_frame_0.png", "stack": 3},
-	"value": {"name": "Coin Value", "desc": "Coins are worth +1 each", "icon": "res://assets/generated/icon_arrow_frame_0.png", "stack": 5},
+	"combo": {"name": "Combo Sense", "desc": "Combo window +2.0s", "icon": "res://assets/generated/icon_star_frame_0.png", "stack": 3},
+	"value": {"name": "Coin Value", "desc": "Coins are worth +2 each", "icon": "res://assets/generated/icon_arrow_frame_0.png", "stack": 5},
 	"shock": {"name": "Shockwave", "desc": "Dash blasts enemies nearby", "icon": "res://assets/generated/icon_shock_frame_0.png", "one_off": true},
 }
 
@@ -316,7 +316,7 @@ func _on_power_collected(p: PowerUp) -> void:
 	Sfx.play("powerup")
 	match p.type:
 		PowerUp.Type.MAGNET:
-			player.magnet_left = 7.0
+			player.magnet_left = 9.0
 			player.magnet_changed.emit(true)
 			Fx.popup(p.global_position, "MAGNET!", Color(0.4, 0.9, 1.0), 26)
 		PowerUp.Type.SHIELD:
@@ -324,8 +324,8 @@ func _on_power_collected(p: PowerUp) -> void:
 			player.shield_changed.emit(true)
 			Fx.popup(p.global_position, "SHIELD!", Color(0.4, 1.0, 0.85), 26)
 		PowerUp.Type.HEART:
-			player.heal(1)
-			Fx.popup(p.global_position, "+1 HP", Color(1.0, 0.4, 0.55), 26)
+			player.heal(2)
+			Fx.popup(p.global_position, "+2 HP", Color(1.0, 0.4, 0.55), 26)
 	_update_power_icons()
 
 # --- Wave-clear upgrades ---------------------------------------------------
@@ -417,12 +417,12 @@ func _apply_buff(id: String) -> void:
 	Fx.popup(player.global_position, str(meta["name"]), Color(0.55, 0.9, 1.0), 24)
 	match id:
 		"speed":
-			player.speed_mult *= 1.15
+			player.speed_mult *= 1.20
 		"dash":
-			player.dash_cd_mult *= 0.8
-			player.dash_speed_mult *= 1.3
+			player.dash_cd_mult *= 0.75
+			player.dash_speed_mult *= 1.35
 		"magnet":
-			player.magnet_radius_bonus += 80.0
+			player.magnet_radius_bonus += 110.0
 		"shield":
 			player.has_shield = true
 			player.shield_changed.emit(true)
@@ -432,9 +432,9 @@ func _apply_buff(id: String) -> void:
 			player.increase_max_hp(1)
 			_build_hearts()
 		"combo":
-			_combo_window += 1.5
+			_combo_window += 2.0
 		"value":
-			_coin_value_bonus += 1
+			_coin_value_bonus += 2
 		"shock":
 			player.shockwave = true
 	if meta.has("one_off"):

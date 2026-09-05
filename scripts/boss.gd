@@ -12,7 +12,7 @@ const BOLT_SCENE := preload("res://scenes/boss_bolt.tscn")
 
 enum State { CHASE, TELEGRAPH_CHARGE, TELEGRAPH_BURST, CHARGE }
 
-@export var max_hp: int = 18
+@export var max_hp: int = 35
 @export var chase_speed: float = 82.0
 @export var charge_speed: float = 560.0
 @export var burst_count: int = 8
@@ -20,7 +20,7 @@ enum State { CHASE, TELEGRAPH_CHARGE, TELEGRAPH_BURST, CHARGE }
 @export var telegraph_time: float = 0.65
 @export var charge_time: float = 0.42
 
-var hp: int = 18
+var hp: int = 35
 var state := State.CHASE
 
 var _state_left := 0.0

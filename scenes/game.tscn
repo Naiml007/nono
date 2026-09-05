@@ -51,7 +51,13 @@ tile_set = SubResource("TileSet_0tnpc")
 
 [node name="Camera" type="Camera2D" parent="." unique_id=835562184]
 unique_name_in_owner = true
+physics_interpolation_mode = 1
+top_level = true
 position = Vector2(640, 360)
+limit_left = 0
+limit_top = 0
+limit_right = 1280
+limit_bottom = 720
 
 [node name="PhantomCameraHost" type="Node" parent="Camera" unique_id=2100000001]
 process_priority = 300
