@@ -1,0 +1,251 @@
+# AGENTS.md
+
+Guidance for AI coding agents and human contributors working in `nono`, a
+2D top-down arcade space-survival game built with **Godot 4.7.2** (GDScript).
+
+## What this game is
+
+**NONO — Endless Space Survival.** A top-down arena arcade game: you pilot a
+robot, dodge chaser drones, grab energy cores (coins), chain score combos,
+collect power-ups, and survive wave after wave. Every cleared wave offers a
+choice of 3 upgrade buffs. Wave 50 is a boss fight with its own camera,
+health bar and a special achievement.
+
+- Genre: 2D arena / wave survival
+- View: top-down, single screen arena (1280×720)
+- Controls: 8-direction movement (Arrows always + WASD optional), dash
+  (Space / Shift / mouse click), ESC to pause
+- Runner: Godot 4.7.2 stable (`.NET` mono build, but the project is pure
+  GDScript — no C# code)
+
+## Quick start
+
+| Task | Command |
+| --- | --- |
+| Run the game | Open `scenes/main_menu.tscn` in the editor, press Play (F5) |
+| Boot straight into gameplay | Run `scenes/game.tscn` |
+| Run a test suite | Open the test `.tscn`/`.gd` in `tests/` and run it, or use Ziva's `run_tests` |
+| Regenerate music | Run `tools/chiptune_generator.gd` (one-shot, see note below) |
+
+The main scene (`project.godot`) is `res://scenes/main_menu.tscn`.
+Window is 1280×720, renderer is `gl_compatibility`.
+
+## Project layout
+
+```
+res://
+├── project.godot          Engine config, autoloads, input actions
+├── default_bus_layout.tres  Audio buses (Master, Music, Sfx)
+├── scenes/                .tscn files, one per entity/UI
+│   ├── main_menu.tscn     Title screen + settings overlay
+│   ├── game.tscn          The whole run: world, HUD, camera, overlays
+│   ├── player.tscn        CharacterBody2D robot pilot
+│   ├── enemy.tscn         Chaser drone (Area2D hitbox)
+│   ├── boss.tscn          Wave-50 boss (extends Enemy)
+│   ├── boss_bolt.tscn     Boss projectile
+│   ├── coin.tscn          Energy-core pickup
+│   └── power_up.tscn      Magnet / Shield / Heart drop
+├── scripts/               One .gd per scene (same name as the scene)
+│   ├── game.gd            Game controller: waves, scoring, upgrades, UI
+│   ├── game_state.gd      Autoload: run state, best score, settings, input actions
+│   ├── player.gd
+│   ├── enemy.gd / boss.gd / boss_bolt.gd
+│   ├── coin.gd / power_up.gd
+│   ├── DebrisFieldSpawner.gd  Grid-based coin scatterer
+│   ├── sfx.gd / music.gd / fx.gd   Audio + "juice" autoloads
+│   ├── achievements.gd    Achievement autoload + toast UI
+│   ├── main_menu.gd / pause_menu.gd / upgrade_panel.gd
+├── assets/
+│   ├── generated/         AI-generated sprites & icons (all art lives here)
+│   ├── audio/sfx/         One-shot wav effects (coin, dash, explode, ...)
+│   ├── audio/music/       4 chiptune wav loops (menu, battle, boss, gameover)
+│   ├── sprites/           Hand-placed sprites (player, coin)
+│   └── fonts/ textures/ tilesets/   Mostly empty / unused
+├── shaders/               menu_bg.gdshader (procedural starfield backdrop)
+├── tests/                 Headless verification scripts + scenes
+├── tools/                 chiptune_generator.gd (music synth)
+└── addons/                phantom_camera, GDQuest formatter, ziva_agent
+```
+
+Convention: a scene `scenes/X.tscn` always pairs with `scripts/X.gd`. Assets
+are referenced as absolute `res://assets/...` paths. Do not edit anything
+under `addons/` unless fixing a bug (see "Known issues" below).
+
+## Global architecture
+
+### Autoloads (registered in project.godot, in load order)
+
+| Singleton | Script | Purpose |
+| --- | --- | --- |
+| `GameState` | `scripts/game_state.gd` | Run score/kills/wave, best-score persistence, WASD/mouse-dash settings, **defines all input actions at runtime** |
+| `Sfx` | `scripts/sfx.gd` | One-shot SFX; coins use a shared polyphonic player |
+| `Fx` | `scripts/fx.gd` | "Juice": particle bursts, floating popups, camera shake. `Fx.setup(world, camera)` is called by `game.gd` |
+| `Achievements` | `scripts/achievements.gd` | Unlock tracking + toast banner. Currently `let_me_solo_her` |
+| `PhantomCameraManager` | `addons/.../phantom_camera_manager.gd` | Engine-level camera manager singleton |
+| `Music` | `scripts/music.gd` | Crossfading BGM loop player; tracks preloaded and looped |
+
+These singletons are referenced by bare name (`GameState.add_score(...)`,
+`Sfx.play("coin")`) — no `class_name` is needed/used for autoloads.
+
+### Input actions — defined in code, not the editor
+
+`GameState._setup_input_actions()` builds the InputMap at startup. There are
+**no** custom actions in `project.godot`:
+
+- `move_left/right/up/down` — arrow keys always; WASD added only when
+  `GameState.wasd_controls` is on (setting persists to `user://`)
+- `dash` — Space + Shift (always bound)
+- `pause` — Escape
+
+Mouse-click dash is handled directly in `player.gd` `_unhandled_input`, not
+via an action, so clicks on UI never dash. If you add an InputMap action,
+prefer following this runtime pattern over editing project.godot, since
+settings toggles rebind at runtime.
+
+### Game flow (scripts/game.gd)
+
+`game.gd` (`class_name Game`) drives everything:
+
+1. `_ready()` → `GameState.reset_run()`, `Fx.setup()`, wire signals, `Music.play("battle")`, `_start_wave(1)`.
+2. Each wave: shows banner, scatters coins (`_scatter_coins` → DebrisFieldSpawner), spawns `2 + wave` enemies over time, staggered from screen edges (`_edge_spawn_pos`).
+3. Enemies (group `"enemies"`) home toward the player with a sine wobble; contact kills them but damages the player unless dashing/invulnerable/shielded.
+4. Coins (group `"coins"`) give `(1 + value_bonus) * combo_multiplier` score; combo multiplier = `1 + floor(combo / 4)` capped at 5, resets 3s after the last pickup.
+5. When all enemies die → `_start_next_wave()` → 1s pause → `_offer_upgrades()` (tree pauses, 3 random buff cards, wait for `upgrade_chosen`) → next wave.
+6. Enemies/power-ups drop: 12% magnet, 10% shield, 7% heart (heart pickups are group `"heart_pickup"` and are force-cleared at each wave start).
+7. Wave 50 → boss wave (`_start_boss_wave`): boss spawns above arena, `BossCam` priority raised to 40, boss health bar shown. On death: +500 score, power-up drops, `let_me_solo_her` achievement if a single source dealt all damage, boss cam priority reset.
+8. Player death → game-over panel (score + best), `GameState.save_best()`, retry reloads scene, Menu unpauses and switches scene.
+
+### Player (scripts/player.gd)
+
+`class_name Player extends CharacterBody2D` (`MOTION_MODE_FLOATING`).
+- Movement: `Input.get_vector(...)` × `speed` × `speed_mult`.
+- Dash: 820 px/s for 0.14s, i-frames, cooldown; dash-through kills enemies; with the `shockwave` buff it also AoE-kills enemies and damages the boss.
+- Health: 4 HP, `took_hit`/`died` signals, invulnerability window, red hurt-flash sprite modulate.
+- Shield absorbs one hit (with 0.8s grace), magnet pulls coins for 7s.
+- Buffs live on the player as multipliers: `speed_mult`, `dash_cd_mult`, `dash_speed_mult`, `magnet_radius_bonus`, `shockwave`.
+- `source_id()` returns `multiplayer.get_unique_id()` — singleplayer always 1; used by boss damage tracking.
+- Position is clamped to the viewport (`_clamp_to_screen`) — the arena **is** the screen.
+
+### Enemies & boss
+
+- `enemy.gd` (`class_name Enemy extends CharacterBody2D`): homes to player, sine wobble, dies on contact with a dashing player / shield. `die(scored: bool)` awards +10 when the player caused it.
+- `boss.gd` (`class_name Boss extends Enemy`): 18 HP, state machine `CHASE → TELEGRAPH_CHARGE/BURST → CHARGE`. Telegraphed attacks (charge dash, 8-way radial bolt burst via `boss_bolt.gd`). **Never dies on contact**; only dash-through damages it (proximity check while `player.is_dashing`). Tracks `_damage_sources` per `source_id` for the solo achievement.
+- Collision: enemies/boss bolt hit the player via `Area2D` in group `"player_hurtbox"` → calls `player.on_enemy_contact()` / `player.apply_boss_damage()`.
+
+### Upgrades (wave-clear buffs)
+
+`BUFFS` dictionary in `game.gd` with `"stack"` (max picks per run) or `"one_off"`
+(once per run) keys: speed, dash, magnet, shield, heal, maxhp, combo, value, shock.
+Choices are picked from the remaining pool, shuffled, 3 shown as code-built
+Button cards in the upgrade panel (1/2/3 hotkeys). `_apply_buff` mutates the
+player or run state directly.
+
+### Camera (Phantom Camera addon)
+
+- `Camera2D` (named `Camera`) has a child `PhantomCameraHost`.
+- Two `PhantomCamera2D` nodes: `PlayerCam` (priority 10, glued to Player) and `BossCam` (priority 0, glued, zoom 1.2, damping 0.12).
+- `game.gd` flips boss cam priority 0↔40 to switch active camera on boss spawn/death.
+- Camera limits are the full 1280×720 arena, so follow position clamps to screen center — the *observable* behavior is the priority zoom switch, not position tracking (see `tests/camera_test.gd`).
+- Manager is an autoload (`PhantomCameraManager`) AND registers itself as an engine singleton named `PhantomCameraManager`.
+
+### Audio
+
+- `Sfx`: loads wavs from `assets/audio/sfx/`; `play(name, pitch=1, vol=0)`.
+  Coin uses an `AudioStreamPolyphonic` shared player (12 voices) so rapid
+  pickups don't spawn nodes; everything else spawns a short-lived player on
+  the `Sfx` bus (`finished → queue_free`).
+- `Music`: crossfades between 2 `AudioStreamPlayer`s (`Music` bus). Tracks
+  preloaded as `AudioStreamWAV` with `LOOP_FORWARD` set in code. `play()` is
+  a no-op if the track is already active — retry/restart never cuts music.
+  Keys: `menu`, `battle`, `boss`, `gameover`.
+- Buses: `Master`, `Music`, `Sfx` (default_bus_layout.tres).
+
+### FX (juice)
+
+`Fx.burst(at, color, ...)` → one-shot `CPUParticles2D`; `Fx.popup(at, text,
+...)` → tweened floating Label; `Fx.shake(amount, dur)` → camera offset jitter.
+Requires `Fx.setup(world, camera)` once per scene (done by `game.gd`).
+
+## Persistence (user://)
+
+| File | What | Written by |
+| --- | --- | --- |
+| `user://nono_save.cfg` | Best score (`meta/best`) | `GameState` on death |
+| `user://nono_settings.cfg` | `wasd`, `mouse_dash` | `GameState` on toggle |
+| `user://nono_achievements.cfg` | Unlocked id list | `Achievements` |
+
+All are simple `ConfigFile`s.
+
+## Testing
+
+Headless test scripts live in `tests/` (each with a tiny `.tscn`):
+
+| Test | Verifies |
+| --- | --- |
+| `boss_flow_test.gd` | Boss spawn/HP/dash-damage/bar/cam, solo achievement, heart despawn between waves, polyphonic coin SFX |
+| `camera_test.gd` | Player cam active by default; boss cam priority → zoom 1.2; back to 1.0 |
+| `coin_pos_test.gd` | All spawned coins land inside the 1280×720 arena |
+| `music_test.gd` | 4 tracks load & loop, crossfades work, main menu boots |
+
+Run any test by running its `.tscn` (the `_ready` runs assertions, prints
+`PASS/FAIL`, and calls `get_tree().quit()`). They instantiate `game.tscn`
+directly, so they need the autoloads present. Use `run_tests` in Ziva or run
+the scene headlessly.
+
+## Tools
+
+- `tools/chiptune_generator.gd` (`class_name ChiptuneGenerator`): one-shot
+  NES-style synth that renders the music wavs into `assets/audio/music/`.
+  Already committed output; regenerate intentionally, not on every run.
+- `addons/GDQuest_GDScript_formatter`: code formatter plugin (optional use).
+
+## Conventions & code style
+
+- GDScript, Godot 4.x idioms: `@export`, `@onready`, typed everything,
+  `signal`, `await`, `class_name` on node scripts.
+- Every `var` is type-hinted (`var _combo := 0`, `var player: Player = %Player`).
+- Signals are the wiring mechanism — `game.gd` `_wire()` connects player
+  signals to UI updates; entities emit and free themselves.
+- Node references use `%UniqueName` (`unique_name_in_owner = true` set on key
+  nodes in game.tscn).
+- Internal state uses the leading-underscore convention (`_wave`, `_rng`).
+- Group names are stringly-typed and important: `player`, `enemies`,
+  `boss`, `coins`, `heart_pickup`, `player_hurtbox`. Keep them consistent.
+- `GameState`/`Sfx`/`Fx`/`Music`/`Achievements` referenced by autoload name.
+- Magic numbers that matter live at the top of the file as `const` (ARENA,
+  COMBO_WINDOW, BOSS_WAVE, BUFFS).
+- Scene↔script pairing: `scenes/player.tscn` → `scripts/player.gd`.
+
+## Git & GitHub
+
+- Remote: `https://github.com/Naiml007/nono.git` (branch `main`).
+- `.gitignore` excludes `.godot/`, `builds/`, `.ziva/`, and the large
+  `zivacode/` binary. Do not commit `builds/`.
+- Commit in small logical units; push with `git push origin main`.
+
+## Known issues & gotchas
+
+1. **Phantom Camera null-manager** (fixed): the addon scripts
+   `phantom_camera_2d.gd` / `phantom_camera_host.gd` previously crashed
+   (`Invalid access to property 'screen_size' on a base object of type
+   'null instance'`) when the `PhantomCameraManager` singleton wasn't
+   available yet (editor preview / embedded run contexts). They now guard
+   with `Engine.has_singleton` / `is_instance_valid`. **Do not regress these
+   guards.** In degraded contexts the host prints "Could not find Phantom
+   Camera Manager singleton" instead of crashing — normal real runs are
+   unaffected.
+2. **Embedded runner ≠ real run**: Ziva's `run_scene` embeds the game in a
+   context where engine singletons may not register; camera errors seen
+   there can be artifacts. Verify camera behavior via `tests/camera_test.gd`
+   or a real SceneTree run.
+3. **Arena = viewport**: the player clamps to the viewport, so headless
+   tests (64×64 default viewport) pin the player near origin — don't read
+   camera positions from headless runs without forcing the window size.
+4. `music.gd` deliberately has **no** `class_name` — the autoload name
+   `Music` is the global identifier. Adding `class_name Music` would
+   conflict.
+5. `input actions` are added at runtime by `GameState`; if you add a new
+   action, do it there so the WASD-toggle logic keeps working.
+6. Don't rename the project (`application/config/name`) — that moves Godot's
+   `user://` folder and loses save data.
+```
