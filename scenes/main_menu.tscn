@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://ccdl8wqmhlyf3" path="res://scripts/main_menu.gd" id="1_menu"]
 [ext_resource type="Shader" uid="uid://cwqg8d8c6l8ao" path="res://shaders/menu_bg.gdshader" id="3_shader"]
-[ext_resource type="Texture2D" uid="uid://o8iqbsflod2u" path="res://assets/sprites/player_robot.png" id="4_robot"]
+[ext_resource type="Texture2D" uid="uid://3s7pgfsky622" path="res://assets/sprites/player_robot.png" id="4_robot"]
 [ext_resource type="Texture2D" uid="uid://b3x22ks0x2r63" path="res://assets/generated/logo_banner_frame_0.png" id="5_logo"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_bg"]
@@ -168,6 +168,19 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_btn_focus")
 text = "SETTINGS"
 
+[node name="AchievementsButton" type="Button" parent="Center/Panel/VBox" unique_id=608937331]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 56)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.97, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_btn_focus")
+text = "ACHIEVEMENTS"
+
 [node name="QuitButton" type="Button" parent="Center/Panel/VBox" unique_id=1706965798]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(280, 56)
@@ -263,6 +276,71 @@ theme_override_font_sizes/font_size = 22
 text = "Mouse click to dash"
 
 [node name="BackButton" type="Button" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=900109791]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 52)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.97, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_btn_focus")
+text = "BACK"
+
+[node name="AchievementsOverlay" type="Control" parent="." unique_id=502710567]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="AchievementsDim" type="ColorRect" parent="AchievementsOverlay" unique_id=2147290049]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.04, 0.08, 0.8)
+
+[node name="AchievementsCenter" type="CenterContainer" parent="AchievementsOverlay" unique_id=2004001857]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="AchievementsPanel" type="PanelContainer" parent="AchievementsOverlay/AchievementsCenter" unique_id=825402554]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="AchievementsVBox" type="VBoxContainer" parent="AchievementsOverlay/AchievementsCenter/AchievementsPanel" unique_id=171161964]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="AchievementsTitle" type="Label" parent="AchievementsOverlay/AchievementsCenter/AchievementsPanel/AchievementsVBox" unique_id=660685793]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 40
+text = "ACHIEVEMENTS"
+horizontal_alignment = 1
+
+[node name="AchievementsScroll" type="ScrollContainer" parent="AchievementsOverlay/AchievementsCenter/AchievementsPanel/AchievementsVBox" unique_id=2100000123]
+custom_minimum_size = Vector2(520, 360)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="AchievementsList" type="VBoxContainer" parent="AchievementsOverlay/AchievementsCenter/AchievementsPanel/AchievementsVBox/AchievementsScroll" unique_id=2100000124]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="AchievementsBack" type="Button" parent="AchievementsOverlay/AchievementsCenter/AchievementsPanel/AchievementsVBox" unique_id=2100000125]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 52)
 layout_mode = 2

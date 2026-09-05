@@ -30,6 +30,26 @@ func unlock(id: String) -> bool:
 func is_unlocked(id: String) -> bool:
 	return _unlocked.has(id)
 
+## Returns every defined achievement with its display info and unlock state,
+## for UI listing (main menu achievements panel).
+func get_all() -> Array[Dictionary]:
+	var list: Array[Dictionary] = []
+	for id in ACHIEVEMENTS:
+		var meta: Dictionary = ACHIEVEMENTS[id]
+		list.append({
+			"id": id,
+			"name": str(meta.get("name", id)),
+			"desc": str(meta.get("desc", "")),
+			"unlocked": is_unlocked(id),
+		})
+	return list
+
+func unlocked_count() -> int:
+	return _unlocked.size()
+
+func total_count() -> int:
+	return ACHIEVEMENTS.size()
+
 func save_unlocked() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("achievements", "unlocked", _unlocked.keys())
