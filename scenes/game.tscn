@@ -4,8 +4,8 @@
 [ext_resource type="Script" uid="uid://bfbicwyml54ox" path="res://scripts/DebrisFieldSpawner.gd" id="2_debris"]
 [ext_resource type="Texture2D" uid="uid://batjfjihvqso5" path="res://assets/generated/space_bg_tile.png" id="2_u5sy4"]
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="3_player"]
-[ext_resource type="Texture2D" uid="uid://c5focmgn2tq1g" path="res://assets/generated/powerup_shield_frame_0.png" id="4_shieldtex"]
-[ext_resource type="Texture2D" uid="uid://p0cpjol1ye33" path="res://assets/generated/powerup_magnet_frame_0.png" id="5_magnetex"]
+[ext_resource type="Texture2D" uid="uid://bt2i4be8dymxx" path="res://assets/generated/powerup_shield_frame_0.png" id="4_shieldtex"]
+[ext_resource type="Texture2D" uid="uid://dpi5nkukujqxc" path="res://assets/generated/powerup_magnet_frame_0.png" id="5_magnetex"]
 [ext_resource type="Script" uid="uid://8umksf8e80fw" path="res://addons/phantom_camera/scripts/resources/tween_resource.gd" id="5_vtaks"]
 [ext_resource type="Script" uid="uid://dec703vuaj6s6" path="res://scripts/upgrade_panel.gd" id="6_upgradepanel"]
 [ext_resource type="Script" uid="uid://bd046eokvcnu2" path="res://addons/phantom_camera/scripts/phantom_camera_host/phantom_camera_host.gd" id="7_pcamhost"]
@@ -26,6 +26,66 @@ script = ExtResource("5_vtaks")
 
 [sub_resource type="Resource" id="Resource_dinhu"]
 script = ExtResource("5_vtaks")
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_hearts"]
+bg_color = Color(0.03, 0.05, 0.1, 0.55)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.85, 1, 0.22)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_btn_normal"]
+bg_color = Color(0.1, 0.17, 0.27, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.85, 1, 0.4)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_btn_pressed"]
+bg_color = Color(0.06, 0.13, 0.22, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.9, 1, 1, 0.7)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_btn_hover"]
+bg_color = Color(0.16, 0.3, 0.46, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.65, 1, 1, 0.95)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_btn_focus"]
+bg_color = Color(0.14, 0.27, 0.4, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 0.85)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bossbar_bg"]
 bg_color = Color(0.1, 0.08, 0.08, 0.9)
@@ -112,6 +172,11 @@ offset_left = 16.0
 offset_top = 12.0
 offset_right = 300.0
 offset_bottom = 46.0
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.6)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 30
 text = "Score: 0"
 
@@ -121,6 +186,11 @@ offset_left = 16.0
 offset_top = 52.0
 offset_right = 300.0
 offset_bottom = 78.0
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.6)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 20
 text = "Wave: 1"
 
@@ -130,7 +200,20 @@ offset_left = 16.0
 offset_top = 84.0
 offset_right = 300.0
 offset_bottom = 116.0
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.6)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 26
+
+[node name="HeartsBacking" type="Panel" parent="HUD" unique_id=2100000400]
+offset_left = 10.0
+offset_top = 118.0
+offset_right = 210.0
+offset_bottom = 160.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hud_hearts")
 
 [node name="Hearts" type="HBoxContainer" parent="HUD" unique_id=1369019036]
 unique_name_in_owner = true
@@ -180,7 +263,14 @@ offset_top = 12.0
 offset_right = -16.0
 offset_bottom = 52.0
 grow_horizontal = 0
+theme_override_colors/font_color = Color(0.85, 0.97, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
+theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_hud_btn_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_hud_btn_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_hud_btn_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_hud_btn_focus")
 text = "Menu"
 
 [node name="Banner" type="Label" parent="HUD" unique_id=167847359]
@@ -197,6 +287,11 @@ offset_right = 300.0
 offset_bottom = 80.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.6)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 3
+theme_override_constants/shadow_offset_y = 3
+theme_override_constants/outline_size = 10
 theme_override_font_sizes/font_size = 64
 text = "WAVE 1"
 horizontal_alignment = 1
@@ -227,6 +322,11 @@ theme_override_constants/separation = 4
 [node name="BossTitle" type="Label" parent="HUD/BossBar" unique_id=2100000005]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.5, 0.3, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.6)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 16
 text = "WAVE 50 BOSS"
 horizontal_alignment = 1
