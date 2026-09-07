@@ -10,10 +10,10 @@ border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
 border_color = Color(0.35, 0.85, 1, 0.45)
-corner_radius_top_left = 46
-corner_radius_top_right = 46
-corner_radius_bottom_right = 46
-corner_radius_bottom_left = 46
+corner_radius_top_left = 48
+corner_radius_top_right = 48
+corner_radius_bottom_right = 48
+corner_radius_bottom_left = 48
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_pressed"]
 bg_color = Color(0.06, 0.13, 0.22, 1)
@@ -22,10 +22,10 @@ border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
 border_color = Color(0.9, 1, 1, 0.75)
-corner_radius_top_left = 46
-corner_radius_top_right = 46
-corner_radius_bottom_right = 46
-corner_radius_bottom_left = 46
+corner_radius_top_left = 48
+corner_radius_top_right = 48
+corner_radius_bottom_right = 48
+corner_radius_bottom_left = 48
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
 bg_color = Color(0.16, 0.3, 0.46, 1)
@@ -34,10 +34,10 @@ border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
 border_color = Color(0.65, 1, 1, 0.95)
-corner_radius_top_left = 46
-corner_radius_top_right = 46
-corner_radius_bottom_right = 46
-corner_radius_bottom_left = 46
+corner_radius_top_left = 48
+corner_radius_top_right = 48
+corner_radius_bottom_right = 48
+corner_radius_bottom_left = 48
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_focus"]
 bg_color = Color(0.14, 0.27, 0.4, 1)
@@ -46,10 +46,10 @@ border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
 border_color = Color(1, 1, 1, 0.85)
-corner_radius_top_left = 46
-corner_radius_top_right = 46
-corner_radius_bottom_right = 46
-corner_radius_bottom_left = 46
+corner_radius_top_left = 48
+corner_radius_top_right = 48
+corner_radius_bottom_right = 48
+corner_radius_bottom_left = 48
 
 [node name="TouchControls" type="CanvasLayer" unique_id=1588116597]
 script = ExtResource("1_touch")
@@ -67,14 +67,14 @@ script = ExtResource("2_joy")
 
 [node name="DashButton" type="Button" parent="." unique_id=2100001002]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(92, 92)
+custom_minimum_size = Vector2(97, 97)
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -110.0
-offset_top = -110.0
+offset_left = -115.0
+offset_top = -115.0
 offset_right = -18.0
 offset_bottom = -18.0
 grow_horizontal = 0
@@ -92,13 +92,13 @@ text = "DASH"
 
 [node name="PauseButton" type="Button" parent="." unique_id=2100001003]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(92, 92)
+custom_minimum_size = Vector2(97, 97)
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 18.0
-offset_top = -110.0
-offset_right = 110.0
+offset_top = -115.0
+offset_right = 115.0
 offset_bottom = -18.0
 grow_vertical = 0
 focus_mode = 0

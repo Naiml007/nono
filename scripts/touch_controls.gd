@@ -18,7 +18,7 @@ extends CanvasLayer
 signal dash_pressed
 signal pause_requested
 
-const BUTTON_SIZE := 92.0
+const BUTTON_SIZE := 97.0
 const BUTTON_MARGIN := 18.0
 const JOYSTICK_RADIUS := 70.0
 const KNOB_RADIUS := 30.0
