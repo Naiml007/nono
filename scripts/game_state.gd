@@ -13,6 +13,9 @@ var wave: int = 0
 ## Control settings (persisted to user://nono_settings.cfg).
 var wasd_controls: bool = true
 var mouse_dash: bool = true
+## On-screen touch controls (virtual joystick + dash/pause buttons). Defaults
+## on: they only appear when a touch happens and auto-hide on keyboard/mouse.
+var touch_controls: bool = true
 ## Audio + display settings (persisted in the same file).
 var master_volume: float = 1.0
 var music_volume: float = 1.0
@@ -61,6 +64,13 @@ func set_mouse_dash(value: bool) -> void:
 	if mouse_dash == value:
 		return
 	mouse_dash = value
+	save_settings()
+	settings_changed.emit()
+
+func set_touch_controls(value: bool) -> void:
+	if touch_controls == value:
+		return
+	touch_controls = value
 	save_settings()
 	settings_changed.emit()
 
@@ -119,6 +129,7 @@ func save_settings() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("controls", "wasd", wasd_controls)
 	cfg.set_value("controls", "mouse_dash", mouse_dash)
+	cfg.set_value("controls", "touch", touch_controls)
 	cfg.set_value("audio", "master", master_volume)
 	cfg.set_value("audio", "music", music_volume)
 	cfg.set_value("audio", "sfx", sfx_volume)
@@ -134,6 +145,7 @@ func load_settings() -> void:
 	if cfg.load(SETTINGS_PATH) != OK:
 		wasd_controls = true
 		mouse_dash = true
+		touch_controls = true
 		master_volume = 1.0
 		music_volume = 1.0
 		sfx_volume = 1.0
@@ -144,6 +156,7 @@ func load_settings() -> void:
 		return
 	wasd_controls = _coerce_bool(cfg.get_value("controls", "wasd", true), true)
 	mouse_dash = _coerce_bool(cfg.get_value("controls", "mouse_dash", true), true)
+	touch_controls = _coerce_bool(cfg.get_value("controls", "touch", true), true)
 	master_volume = _coerce_volume(cfg.get_value("audio", "master", 1.0), 1.0)
 	music_volume = _coerce_volume(cfg.get_value("audio", "music", 1.0), 1.0)
 	sfx_volume = _coerce_volume(cfg.get_value("audio", "sfx", 1.0), 1.0)

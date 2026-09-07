@@ -13,6 +13,7 @@ extends Control
 @onready var settings_overlay: Control = %SettingsOverlay
 @onready var wasd_toggle: CheckButton = %WasdToggle
 @onready var mouse_dash_toggle: CheckButton = %MouseDashToggle
+@onready var touch_toggle: CheckButton = %TouchToggle
 @onready var master_slider: HSlider = %MasterVolumeSlider
 @onready var music_slider: HSlider = %MusicVolumeSlider
 @onready var sfx_slider: HSlider = %SfxVolumeSlider
@@ -34,6 +35,7 @@ func _ready() -> void:
 	# Set initial toggle state before connecting so ready-time signal fires are no-ops.
 	wasd_toggle.button_pressed = GameState.wasd_controls
 	mouse_dash_toggle.button_pressed = GameState.mouse_dash
+	touch_toggle.button_pressed = GameState.touch_controls
 	fullscreen_toggle.button_pressed = GameState.fullscreen
 	master_slider.value = GameState.master_volume
 	music_slider.value = GameState.music_volume
@@ -50,6 +52,7 @@ func _ready() -> void:
 	achievements_back.pressed.connect(_close_achievements)
 	wasd_toggle.toggled.connect(_on_wasd_toggled)
 	mouse_dash_toggle.toggled.connect(_on_mouse_dash_toggled)
+	touch_toggle.toggled.connect(_on_touch_toggled)
 	master_slider.value_changed.connect(_on_master_volume_changed)
 	music_slider.value_changed.connect(_on_music_volume_changed)
 	sfx_slider.value_changed.connect(_on_sfx_volume_changed)
@@ -96,6 +99,10 @@ func _on_mouse_dash_toggled(value: bool) -> void:
 	GameState.set_mouse_dash(value)
 	_update_controls_hint()
 
+func _on_touch_toggled(value: bool) -> void:
+	GameState.set_touch_controls(value)
+	_update_controls_hint()
+
 func _on_master_volume_changed(value: float) -> void:
 	GameState.set_master_volume(value)
 	master_value.text = "%d%%" % roundi(value * 100)
@@ -123,6 +130,8 @@ func _update_controls_hint() -> void:
 	var dash := "Space / Shift"
 	if GameState.mouse_dash:
 		dash += " / Click"
+	if GameState.touch_controls:
+		dash += " / Touch"
 	controls_hint.text = "%s to move   ·   %s to dash" % [move, dash]
 
 # --- Achievements -----------------------------------------------------------

@@ -8,6 +8,11 @@ signal magnet_changed(active: bool)
 signal died
 signal took_hit
 
+## The play arena is a fixed 1280x720 logical box, even when the window's
+## aspect ratio expands the viewport (mobile stretch aspect = expand). The
+## player clamps to this box, never to the (possibly larger) viewport.
+const ARENA := Vector2(1280, 720)
+
 @export var speed: float = 250.0
 @export var dash_speed: float = 820.0
 @export var dash_time: float = 0.14
@@ -75,13 +80,19 @@ func _unhandled_input(event: InputEvent) -> void:
 	# UI buttons never also trigger a dash. Space/Shift dash via the "dash" action.
 	if event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT and GameState.mouse_dash:
-		_try_dash()
+		try_dash()
 
 func _can_dash() -> bool:
 	return _cd_left <= 0.0 and not is_dashing
 
+## Public dash entry point — the on-screen touch dash button calls this, and
+## it shares the exact same implementation as the keyboard (action) and mouse
+## (click) paths: there is only one dash code path.
+func try_dash() -> void:
+	_try_dash()
+
 func _try_dash() -> void:
-	if not _can_dash():
+	if _dead or not _can_dash():
 		return
 	is_dashing = true
 	_dash_dir = _facing.normalized()
@@ -190,11 +201,14 @@ func _tick(delta: float) -> void:
 		base.a = 0.35
 	sprite.modulate = base
 
+## Keep the player inside the fixed 1280x720 arena. With stretch aspect=expand
+## the viewport can be wider/taller than the arena on mobile, so clamping to
+## the viewport rect (the old behaviour) would let the player leave the play
+## area into the letterbox-free margin.
 func _clamp_to_screen() -> void:
-	var rect := get_viewport_rect()
 	global_position = Vector2(
-		clampf(global_position.x, 0.0, rect.size.x),
-		clampf(global_position.y, 0.0, rect.size.y)
+		clampf(global_position.x, 0.0, ARENA.x),
+		clampf(global_position.y, 0.0, ARENA.y)
 	)
 
 func is_invulnerable() -> bool:

@@ -28,7 +28,9 @@ health bar and a special achievement.
 | Regenerate music | Run `tools/chiptune_generator.gd` (one-shot, see note below) |
 
 The main scene (`project.godot`) is `res://scenes/main_menu.tscn`.
-Window is 1280×720, renderer is `gl_compatibility`.
+Window is 1280×720, renderer is `gl_compatibility`. Mobile: stretch aspect is
+`expand` (the 1280×720 arena stays centered; the wider margins hold the touch
+controls) and orientation is locked landscape (`sensor_landscape`).
 
 ## Project layout
 
@@ -39,6 +41,7 @@ res://
 ├── scenes/                .tscn files, one per entity/UI
 │   ├── main_menu.tscn     Title screen + settings overlay
 │   ├── game.tscn          The whole run: world, HUD, camera, overlays
+│   ├── touch_controls.tscn  On-screen joystick + DASH/PAUSE buttons (mobile)
 │   ├── player.tscn        CharacterBody2D robot pilot
 │   ├── enemy.tscn         Chaser drone (Area2D hitbox)
 │   ├── boss.tscn          Wave-50 boss (extends Enemy)
@@ -47,6 +50,8 @@ res://
 │   └── power_up.tscn      Magnet / Shield / Heart drop
 ├── scripts/               One .gd per scene (same name as the scene)
 │   ├── game.gd            Game controller: waves, scoring, upgrades, UI
+│   ├── touch_controls.gd  Virtual joystick (drives move_*) + touch DASH/PAUSE
+│   ├── joystick_visual.gd Draws the joystick base ring + knob
 │   ├── game_state.gd      Autoload: run state, best score, settings, input actions
 │   ├── player.gd
 │   ├── enemy.gd / boss.gd / boss_bolt.gd
@@ -102,6 +107,10 @@ via an action, so clicks on UI never dash. If you add an InputMap action,
 prefer following this runtime pattern over editing project.godot, since
 settings toggles rebind at runtime.
 
+On phones the virtual joystick feeds the SAME `move_left/right/up/down`
+actions via `Input.action_press/release` (re-asserted every frame), so
+`player.gd` has zero touch code.
+
 ### Game flow (scripts/game.gd)
 
 `game.gd` (`class_name Game`) drives everything:
@@ -124,7 +133,32 @@ settings toggles rebind at runtime.
 - Shield absorbs one hit (with 0.8s grace), magnet pulls coins for 7s.
 - Buffs live on the player as multipliers: `speed_mult`, `dash_cd_mult`, `dash_speed_mult`, `magnet_radius_bonus`, `shockwave`.
 - `source_id()` returns `multiplayer.get_unique_id()` — singleplayer always 1; used by boss damage tracking.
-- Position is clamped to the viewport (`_clamp_to_screen`) — the arena **is** the screen.
+- Position is clamped to the fixed `ARENA` box (1280×720) — the arena is
+  always the 1280×720 logical box, even when the mobile `aspect = expand`
+  viewport is wider/taller.
+
+### Touch controls (mobile)
+
+- `touch_controls.tscn` (`class_name TouchControls`, a CanvasLayer at layer 5)
+  sits in `game.tscn` as `%TouchControls`. It auto-shows on the first touch and
+  auto-hides on any real keyboard/mouse event.
+- The virtual joystick anchors where the thumb touches, but only in the left
+  62% of the screen; a dead zone (0.18) is remapped to a smooth ramp. It drives
+  the shared `move_*` actions via `Input.action_press/release`, re-asserted
+  every frame in `_process` (a single `action_press` only lasts one frame).
+- DASH emits `dash_pressed` -> `game.gd` -> `player.try_dash()` (the single
+  dash implementation). PAUSE emits `pause_requested` -> `game.gd`
+  `_on_touch_pause_requested()` -> the same pause overlay as ESC.
+- Godot synthesizes mouse events from touches; while touch mode is ON any
+  emulated click not on a button is swallowed (`set_input_as_handled`) so a
+  stray touch never also fires the mouse-click dash. A genuine desktop mouse
+  is never swallowed, so click-dash keeps working.
+- Buttons are 92px (≥ the 88px touch target), laid out from
+  `DisplayServer.get_display_safe_area()` so they clear notches/home bars.
+  `game.gd` calls `set_controls_enabled(false)` while paused / game over so
+  the controls never float over a menu.
+- The setting `GameState.touch_controls` (default on) persists to
+  `user://nono_settings.cfg` and has a toggle in the main-menu settings panel.
 
 ### Enemies & boss
 
@@ -180,7 +214,7 @@ Requires `Fx.setup(world, camera)` once per scene (done by `game.gd`).
 | File | What | Written by |
 | --- | --- | --- |
 | `user://nono_save.cfg` | Best score (`meta/best`) | `GameState` on death |
-| `user://nono_settings.cfg` | `wasd`, `mouse_dash`, master/music/sfx volume, fullscreen | `GameState` on change |
+| `user://nono_settings.cfg` | `wasd`, `mouse_dash`, `touch`, master/music/sfx volume, fullscreen | `GameState` on change |
 | `user://nono_achievements.cfg` | Unlocked id list | `Achievements` |
 
 All are simple `ConfigFile`s.
@@ -198,6 +232,7 @@ Headless test scripts live in `tests/` (each with a tiny `.tscn`):
 | `upgrade_panel_test.gd` | Upgrade offer: exactly 3 cards, pause/unpause, buff applied once, STACK/ONCE-PER-RUN chips, out-of-range index ignored |
 | `progress_persistence_test.gd` | Settings round-trip (volume/fullscreen), corrupted/missing file fallbacks, achievement persistence, reset_progress keeps settings |
 | `smoke_test.gd` | Wave 1→50 boss kill→game over flow, score+best labels, retry reset, menu unpause |
+| `touch_input_test.gd` | Virtual joystick drives move_* actions, DASH/PAUSE route to try_dash/pause, auto show/hide, emulated-mouse swallow, safe-area anchors, touch_controls round-trip |
 
 Run any test by running its `.tscn` (the `_ready` runs assertions, prints
 `PASS/FAIL`, and calls `get_tree().quit()`). They instantiate `game.tscn`
@@ -238,6 +273,32 @@ the scene headlessly.
   `zivacode/` binary. Do not commit `builds/`.
 - Commit in small logical units; push with `git push origin main`.
 
+## Exporting / Android
+
+- `export_presets.cfg` has 4 presets: Windows Desktop, macOS, Web, Android.
+  Web is **not usable**: this is the **mono** (.NET) build and Godot dropped
+  .NET Web export — no web templates ship in the mono template pack.
+- Android presets: `gradle_build/use_gradle_build=true` (required for C#),
+  `gradle_build/min_sdk="24"` (Godot lib needs ≥24), `target_sdk="34"`,
+  arm64-v8a only, `builds/nono.apk`.
+- Toolchain already installed on this machine (see `export_presets.cfg` +
+  editor settings): full `4.7.2.stable.mono` export templates in
+  `%APPDATA%\Godot\export_templates\4.7.2.stable.mono`, Android SDK at
+  `%LOCALAPPDATA%\Android\Sdk` (platform-tools, platforms;android-34,
+  build-tools;34.0.0), and **JDK 21 (Temurin) at
+  `%LOCALAPPDATA%\Programs\temurin21\jdk-21.0.12.1+1`** — Java 25 (Zulu)
+  is NOT compatible with Gradle 8.11.1 (major version 69 > 67).
+- The Gradle build template lives at `res://android/build` (gitignored;
+  `--install-android-build-template` installs it). It sets
+  `org.gradle.java.home=C:/Users/distr/AppData/Local/Programs/temurin21/jdk-21.0.12.1+1`
+  in `android/build/gradle.properties` — use forward slashes there (Java
+  properties treats `\` as an escape, so `\t`/`\Users` get mangled).
+- Build for phone test (headless):
+  `Godot_v4.7.2-stable_mono_win64.exe --headless --path . --export-debug "Android" builds/nono.apk`
+  then `adb install -r builds/nono.apk` with a phone in USB-debugging mode.
+  The `~libziva_agent...dll` copy errors during headless export are benign
+  (editor holds the DLL; the extension is excluded from the build anyway).
+
 ## Known issues & gotchas
 
 1. **Phantom Camera null-manager** (fixed): the addon scripts
@@ -253,9 +314,12 @@ the scene headlessly.
    context where engine singletons may not register; camera errors seen
    there can be artifacts. Verify camera behavior via `tests/camera_test.gd`
    or a real SceneTree run.
-3. **Arena = viewport**: the player clamps to the viewport, so headless
-   tests (64×64 default viewport) pin the player near origin — don't read
-   camera positions from headless runs without forcing the window size.
+3. **Arena is fixed**: the player clamps to the 1280×720 `ARENA` box, not the
+   viewport, so the arena stays centered under `aspect = expand`. Headless
+   viewport sizes are not the design size; don't read camera positions from
+   headless runs without forcing the window size. `Input.parse_input_event`
+   scales event coordinates by the window/viewport stretch factor in headless
+   (~20x), so tests convert coordinates or drive handlers directly.
 4. `music.gd` deliberately has **no** `class_name` — the autoload name
    `Music` is the global identifier. Adding `class_name Music` would
    conflict.

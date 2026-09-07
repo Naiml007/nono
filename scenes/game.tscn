@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://f4j37fuqtv3l" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" uid="uid://bfbicwyml54ox" path="res://scripts/DebrisFieldSpawner.gd" id="2_debris"]
 [ext_resource type="Texture2D" uid="uid://batjfjihvqso5" path="res://assets/generated/space_bg_tile.png" id="2_u5sy4"]
-[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="3_player"]
+[ext_resource type="PackedScene" uid="uid://c6nwqmhpgde7m" path="res://scenes/player.tscn" id="3_player"]
 [ext_resource type="Texture2D" uid="uid://bt2i4be8dymxx" path="res://assets/generated/powerup_shield_frame_0.png" id="4_shieldtex"]
 [ext_resource type="Texture2D" uid="uid://dpi5nkukujqxc" path="res://assets/generated/powerup_magnet_frame_0.png" id="5_magnetex"]
 [ext_resource type="Script" uid="uid://8umksf8e80fw" path="res://addons/phantom_camera/scripts/resources/tween_resource.gd" id="5_vtaks"]
@@ -11,6 +11,7 @@
 [ext_resource type="Script" uid="uid://bd046eokvcnu2" path="res://addons/phantom_camera/scripts/phantom_camera_host/phantom_camera_host.gd" id="7_pcamhost"]
 [ext_resource type="Script" uid="uid://bhexx6mj1xv3q" path="res://addons/phantom_camera/scripts/phantom_camera/phantom_camera_2d.gd" id="8_pcam2d"]
 [ext_resource type="Script" uid="uid://b6xtfb50i8p46" path="res://scripts/pause_menu.gd" id="9_pausemenu"]
+[ext_resource type="PackedScene" uid="uid://bbxn3rweudabx" path="res://scenes/touch_controls.tscn" id="10_touch"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_gee14"]
 texture = ExtResource("2_u5sy4")
@@ -103,6 +104,14 @@ corner_radius_bottom_left = 8
 
 [node name="Game" type="Node2D" unique_id=1861883669]
 script = ExtResource("1_game")
+
+[node name="Backdrop" type="Sprite2D" parent="." unique_id=998112782]
+z_index = -11
+texture_repeat = 2
+position = Vector2(640, 360)
+texture = ExtResource("2_u5sy4")
+region_enabled = true
+region_rect = Rect2(0, 0, 2400, 1200)
 
 [node name="Background" type="TileMapLayer" parent="." unique_id=955792762]
 z_index = -10
@@ -507,6 +516,9 @@ custom_minimum_size = Vector2(240, 52)
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
 text = "Menu"
+
+[node name="TouchControls" parent="." unique_id=1589367961 instance=ExtResource("10_touch")]
+unique_name_in_owner = true
 
 [connection signal="pressed" from="GameOver/GameOverPanel/Center/VBox/GameOverMenuButton" to="." method="_to_menu"]
 [connection signal="pressed" from="PauseLayer/PausePanel/Center/VBox/ResumeButton" to="." method="_on_resume_pressed"]

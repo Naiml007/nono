@@ -55,6 +55,7 @@ const BUFFS := {
 @onready var player_cam: Node2D = %PlayerCam
 @onready var boss_cam: Node2D = %BossCam
 @onready var pause_panel: PauseMenu = %PausePanel
+@onready var touch_controls: TouchControls = %TouchControls
 
 var _rng := RandomNumberGenerator.new()
 var _wave := 0
@@ -107,9 +108,19 @@ func _unhandled_input(event: InputEvent) -> void:
 func _set_paused(paused: bool) -> void:
 	get_tree().paused = paused
 	pause_panel.visible = paused
+	if touch_controls != null:
+		# Keep the touch buttons off the pause overlay.
+		touch_controls.set_controls_enabled(not paused)
 
 func _on_resume_pressed() -> void:
 	_set_paused(false)
+
+## Pause button on the touch controls: same handler the ESC path reaches, so
+## the exact same guards (game over / upgrade panel) apply.
+func _on_touch_pause_requested() -> void:
+	if _game_over or upgrade_panel.visible:
+		return
+	_set_paused(true)
 
 func _wire() -> void:
 	menu_button.pressed.connect(_to_menu)
@@ -124,6 +135,8 @@ func _wire() -> void:
 	player.took_hit.connect(_on_player_hit)
 	player.died.connect(_on_player_died)
 	upgrade_panel.choice_requested.connect(_on_upgrade_choice_index)
+	touch_controls.dash_pressed.connect(player.try_dash)
+	touch_controls.pause_requested.connect(_on_touch_pause_requested)
 
 # --- Waves -----------------------------------------------------------------
 
@@ -528,6 +541,7 @@ func _on_player_hit() -> void:
 
 func _on_player_died() -> void:
 	_game_over = true
+	touch_controls.set_controls_enabled(false)
 	Fx.burst(player.global_position, Color(1.0, 0.5, 0.3), 42, 460, 1.0, 1.8)
 	Fx.shake(16.0, 0.5)
 	Fx.hitstop(0.28)

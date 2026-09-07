@@ -275,6 +275,14 @@ theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
 theme_override_font_sizes/font_size = 22
 text = "Mouse click to dash"
 
+[node name="TouchToggle" type="CheckButton" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=1464649639]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 44)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "Touch controls"
+
 [node name="AudioHeader" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=1023922732]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.8, 0.95, 1)
