@@ -1,0 +1,172 @@
+name: Build & Test
+
+# When this pipeline runs:
+#   - every push / PR            -> headless test suite
+#   - pushes to main             -> + Windows export (fresh build artifact)
+#   - tag vX.Y.Z or manual run   -> + Windows + Android exports
+#
+# NOTE: this project uses the MONO (.NET) build of Godot 4.7.2 (pure GDScript,
+# no C# code, but the mono engine + mono export templates are required), so all
+# jobs use the godot-ci MONO docker image.
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # TEST: run the headless GDScript test suite on every branch/PR
+  # ---------------------------------------------------------------------------
+  test:
+    name: Headless tests
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:mono-4.7.2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      # The image installs the engine config + mono export templates under
+      # /root/, but GitHub Actions container jobs run with HOME=/github/home,
+      # so move them where the godot binary will look for them.
+      - name: Setup Godot (mono templates + editor settings)
+        run: |
+          mkdir -v -p ~/.local/share/godot/export_templates/
+          mkdir -v -p ~/.config/
+          mv /root/.config/godot ~/.config/godot
+          mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono
+
+      - name: Import project (build the .godot cache)
+        run: |
+          godot --headless --path . --import --quit
+
+      - name: Run headless tests
+        # Each tests/*_test.tscn runs its assertions, prints "PASS: ..." /
+        # "FAIL: ..." and quits. A test fails the build if it prints a "FAIL:"
+        # line, if its own "failures=N" summary is non-zero, or if it crashes
+        # (non-zero exit, e.g. a script error).
+        #
+        # NOTE: the summary line is "... failures=0 ...", so a plain
+        # case-insensitive grep for "FAIL" matches EVERY passing test. Match the
+        # two real signals precisely instead: a "FAIL:" line, or failures=<1-9>.
+        run: |
+          set -e
+          fail=0
+          for file in tests/*_test.tscn; do
+            name="$(basename "$file")"
+            echo "==== Running $name ===="
+            if output="$(godot --headless --path . "$file" 2>&1)"; then
+              echo "$output"
+            else
+              code=$?
+              echo "$output"
+              echo "::error::$name crashed with exit code $code"
+              fail=1
+              continue
+            fi
+            if echo "$output" | grep -qE '^FAIL:|failures=[1-9]|SCRIPT ERROR'; then
+              echo "::error::$name FAILED"
+              fail=1
+            fi
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo "One or more tests failed."
+            exit 1
+          fi
+          echo "All headless tests passed."
+
+  # ---------------------------------------------------------------------------
+  # EXPORT WINDOWS: build builds/nono.exe (+ .pck) on main / tags / manual
+  # ---------------------------------------------------------------------------
+  export-windows:
+    name: Export Windows
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:mono-4.7.2
+    needs: test
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup Godot (mono templates + editor settings)
+        run: |
+          mkdir -v -p ~/.local/share/godot/export_templates/
+          mkdir -v -p ~/.config/
+          mv /root/.config/godot ~/.config/godot
+          mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono
+
+      - name: Import project (fresh clone needs the .godot cache)
+        run: |
+          godot --headless --path . --import --quit
+
+      # Preset uses embed_pck=false -> both nono.exe and nono.pck are produced.
+      - name: Export Windows release
+        run: |
+          godot --headless --path . --export-release "Windows Desktop" builds/nono.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nono-windows
+          path: builds/
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # EXPORT ANDROID: build the APK on tags / manual only (slow gradle build)
+  # ---------------------------------------------------------------------------
+  export-android:
+    name: Export Android APK
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:mono-4.7.2
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup Godot (mono templates + editor settings)
+        run: |
+          mkdir -v -p ~/.local/share/godot/export_templates/
+          mkdir -v -p ~/.config/
+          mv /root/.config/godot ~/.config/godot
+          mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono
+
+      # The image's editor settings already point the Android SDK / JDK /
+      # debug keystore at the right paths (installed inside the image).
+      - name: Install Android build template
+        run: |
+          godot --headless --path . --install-android-build-template --quit
+
+      - name: Import project (fresh clone needs the .godot cache)
+        run: |
+          godot --headless --path . --import --quit
+
+      # Debug export = the same proven path used locally (AGENTS.md). It is
+      # signed with the debug keystore that ships inside the image, so no
+      # secrets are needed. A release-signed APK would require configuring a
+      # keystore + GitHub secrets (see repo docs) and --export-release.
+      - name: Export Android (debug, signed with debug keystore)
+        run: |
+          godot --headless --path . --export-debug "Android" builds/nono.apk
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nono-android
+          path: builds/nono.apk
+          if-no-files-found: error
