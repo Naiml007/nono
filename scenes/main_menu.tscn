@@ -8,68 +8,6 @@
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_bg"]
 shader = ExtResource("3_shader")
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
-bg_color = Color(0.05, 0.07, 0.13, 0.9)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.3, 0.8, 1, 0.35)
-corner_radius_top_left = 20
-corner_radius_top_right = 20
-corner_radius_bottom_right = 20
-corner_radius_bottom_left = 20
-shadow_color = Color(0, 0, 0, 0.5)
-shadow_size = 18
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_normal"]
-bg_color = Color(0.1, 0.17, 0.27, 0.95)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.35, 0.85, 1, 0.4)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_pressed"]
-bg_color = Color(0.06, 0.13, 0.22, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.9, 1, 1, 0.7)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
-bg_color = Color(0.16, 0.3, 0.46, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.65, 1, 1, 0.95)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_focus"]
-bg_color = Color(0.14, 0.27, 0.4, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(1, 1, 1, 0.85)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-
 [node name="MainMenu" type="Control" unique_id=939725838]
 layout_mode = 3
 anchors_preset = 15
@@ -108,15 +46,14 @@ grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="Center" unique_id=878301273]
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="VBox" type="VBoxContainer" parent="Center/Panel" unique_id=131064521]
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 16
 
 [node name="Robot" type="TextureRect" parent="Center/Panel/VBox" unique_id=1013080260]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(84, 84)
+custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
 size_flags_horizontal = 4
 texture = ExtResource("4_robot")
@@ -125,7 +62,7 @@ stretch_mode = 5
 
 [node name="Logo" type="TextureRect" parent="Center/Panel/VBox" unique_id=511464183]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(336, 112)
+custom_minimum_size = Vector2(400, 134)
 layout_mode = 2
 texture = ExtResource("5_logo")
 expand_mode = 1
@@ -133,72 +70,46 @@ stretch_mode = 5
 
 [node name="SubtitleLabel" type="Label" parent="Center/Panel/VBox" unique_id=65887053]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.72, 0.8, 0.95, 1)
-theme_override_font_sizes/font_size = 20
+theme_type_variation = &"BodyMuted"
 text = "ENDLESS SPACE SURVIVAL"
 horizontal_alignment = 1
 
 [node name="Spacer" type="Control" parent="Center/Panel/VBox" unique_id=853116166]
-custom_minimum_size = Vector2(0, 6)
+custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
 
 [node name="PlayButton" type="Button" parent="Center/Panel/VBox" unique_id=1337622671]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(280, 56)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.97, 1, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 24
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_btn_focus")
+theme_type_variation = &"Primary"
 text = "PLAY"
 
 [node name="SettingsButton" type="Button" parent="Center/Panel/VBox" unique_id=608937330]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(280, 56)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.97, 1, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 24
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_btn_focus")
+theme_type_variation = &"Ghost"
 text = "SETTINGS"
 
 [node name="AchievementsButton" type="Button" parent="Center/Panel/VBox" unique_id=608937331]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(280, 56)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.97, 1, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 24
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_btn_focus")
+theme_type_variation = &"Ghost"
 text = "ACHIEVEMENTS"
 
 [node name="QuitButton" type="Button" parent="Center/Panel/VBox" unique_id=1706965798]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(280, 56)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.97, 1, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 24
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_btn_focus")
+theme_type_variation = &"Ghost"
 text = "QUIT"
 
 [node name="BestLabel" type="Label" parent="Center/Panel/VBox" unique_id=142908569]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.95, 0.85, 0.4, 1)
-theme_override_font_sizes/font_size = 18
+theme_type_variation = &"Gold"
 text = "BEST SCORE: 0"
 horizontal_alignment = 1
 
@@ -214,8 +125,7 @@ offset_top = -46.0
 offset_bottom = -18.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_colors/font_color = Color(0.62, 0.7, 0.85, 1)
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"SmallHud"
 text = "Arrows to move · Space / Shift to dash"
 horizontal_alignment = 1
 
@@ -235,7 +145,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.02, 0.04, 0.08, 0.92)
+color = Color(0.02, 0.04, 0.08, 0.86)
 
 [node name="SettingsCenter" type="CenterContainer" parent="SettingsOverlay" unique_id=2004001856]
 layout_mode = 0
@@ -246,7 +156,6 @@ grow_vertical = 2
 
 [node name="SettingsPanel" type="PanelContainer" parent="SettingsOverlay/SettingsCenter" unique_id=825402553]
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="SettingsVBox" type="VBoxContainer" parent="SettingsOverlay/SettingsCenter/SettingsPanel" unique_id=171161963]
 layout_mode = 2
@@ -254,8 +163,7 @@ theme_override_constants/separation = 16
 
 [node name="SettingsTitle" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=660685792]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.95, 1, 1)
-theme_override_font_sizes/font_size = 40
+theme_type_variation = &"Title"
 text = "SETTINGS"
 horizontal_alignment = 1
 
@@ -263,43 +171,35 @@ horizontal_alignment = 1
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 44)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
-theme_override_font_sizes/font_size = 22
 text = "WASD movement"
 
 [node name="MouseDashToggle" type="CheckButton" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=1464649638]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 44)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
-theme_override_font_sizes/font_size = 22
 text = "Mouse click to dash"
 
 [node name="TouchToggle" type="CheckButton" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=1464649639]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 44)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
-theme_override_font_sizes/font_size = 22
 text = "Touch controls"
 
 [node name="AudioHeader" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=1023922732]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.8, 0.95, 1)
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"Section"
 text = "VOLUME"
 horizontal_alignment = 1
 
 [node name="MasterVolumeRow" type="HBoxContainer" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=2099574891]
 custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
 [node name="MasterVolumeName" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MasterVolumeRow" unique_id=486437179]
 custom_minimum_size = Vector2(92, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
-theme_override_font_sizes/font_size = 18
+theme_type_variation = &"Body"
 text = "Master"
 
 [node name="MasterVolumeSlider" type="HSlider" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MasterVolumeRow" unique_id=1958817629]
@@ -316,21 +216,19 @@ value = 1.0
 unique_name_in_owner = true
 custom_minimum_size = Vector2(44, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.62, 0.7, 0.85, 1)
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"Small"
 text = "100%"
 horizontal_alignment = 2
 
 [node name="MusicVolumeRow" type="HBoxContainer" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=378533364]
 custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
 [node name="MusicVolumeName" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MusicVolumeRow" unique_id=10874255]
 custom_minimum_size = Vector2(92, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
-theme_override_font_sizes/font_size = 18
+theme_type_variation = &"Body"
 text = "Music"
 
 [node name="MusicVolumeSlider" type="HSlider" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MusicVolumeRow" unique_id=388506265]
@@ -347,21 +245,19 @@ value = 1.0
 unique_name_in_owner = true
 custom_minimum_size = Vector2(44, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.62, 0.7, 0.85, 1)
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"Small"
 text = "100%"
 horizontal_alignment = 2
 
 [node name="SfxVolumeRow" type="HBoxContainer" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=1855985463]
 custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
 [node name="SfxVolumeName" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SfxVolumeRow" unique_id=806113530]
 custom_minimum_size = Vector2(92, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
-theme_override_font_sizes/font_size = 18
+theme_type_variation = &"Body"
 text = "SFX"
 
 [node name="SfxVolumeSlider" type="HSlider" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SfxVolumeRow" unique_id=1001606857]
@@ -378,15 +274,13 @@ value = 1.0
 unique_name_in_owner = true
 custom_minimum_size = Vector2(44, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.62, 0.7, 0.85, 1)
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"Small"
 text = "100%"
 horizontal_alignment = 2
 
 [node name="DisplayHeader" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=897253862]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.8, 0.95, 1)
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"Section"
 text = "DISPLAY"
 horizontal_alignment = 1
 
@@ -394,14 +288,11 @@ horizontal_alignment = 1
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 44)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
-theme_override_font_sizes/font_size = 22
 text = "Fullscreen"
 
 [node name="DangerHeader" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=199418428]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.8, 0.95, 1)
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"Section"
 text = "DATA"
 horizontal_alignment = 1
 
@@ -409,22 +300,14 @@ horizontal_alignment = 1
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 44)
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.7, 0.7, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 20
+theme_type_variation = &"Danger"
 text = "Reset progress"
 
 [node name="BackButton" type="Button" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=900109791]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 52)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.97, 1, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_btn_focus")
+theme_type_variation = &"Ghost"
 text = "BACK"
 
 [node name="AchievementsOverlay" type="Control" parent="." unique_id=502710567]
@@ -443,7 +326,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.02, 0.04, 0.08, 0.8)
+color = Color(0.02, 0.04, 0.08, 0.86)
 
 [node name="AchievementsCenter" type="CenterContainer" parent="AchievementsOverlay" unique_id=2004001857]
 layout_mode = 0
@@ -454,7 +337,6 @@ grow_vertical = 2
 
 [node name="AchievementsPanel" type="PanelContainer" parent="AchievementsOverlay/AchievementsCenter" unique_id=825402554]
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="AchievementsVBox" type="VBoxContainer" parent="AchievementsOverlay/AchievementsCenter/AchievementsPanel" unique_id=171161964]
 layout_mode = 2
@@ -463,8 +345,7 @@ theme_override_constants/separation = 16
 [node name="AchievementsTitle" type="Label" parent="AchievementsOverlay/AchievementsCenter/AchievementsPanel/AchievementsVBox" unique_id=660685793]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.95, 1, 1)
-theme_override_font_sizes/font_size = 40
+theme_type_variation = &"Title"
 text = "ACHIEVEMENTS"
 horizontal_alignment = 1
 
@@ -477,19 +358,13 @@ size_flags_vertical = 3
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
 [node name="AchievementsBack" type="Button" parent="AchievementsOverlay/AchievementsCenter/AchievementsPanel/AchievementsVBox" unique_id=2100000125]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 52)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.97, 1, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_btn_focus")
+theme_type_variation = &"Ghost"
 text = "BACK"
 
 [node name="ResetConfirm" type="ConfirmationDialog" parent="." unique_id=2100000130]

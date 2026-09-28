@@ -159,38 +159,38 @@ func _populate_achievements() -> void:
 func _build_achievement_row(entry: Dictionary) -> Control:
 	var unlocked: bool = bool(entry.get("unlocked", false))
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 14)
+	row.add_theme_constant_override("separation", 16)
 	row.custom_minimum_size = Vector2(0, 52)
+	# Locked rows dim as a whole (modulate) instead of carrying per-label colour
+	# overrides, so every colour token stays in the shared theme.
+	if not unlocked:
+		row.modulate = Color(1, 1, 1, 0.55)
 
 	# Status icon: gold star for unlocked, dim lock-slot for locked.
 	var icon := Label.new()
 	icon.text = "\u2605" if unlocked else "\u25cb"
-	icon.add_theme_font_size_override("font_size", 28)
-	icon.add_theme_color_override("font_color", Color(1.0, 0.82, 0.3) if unlocked else Color(0.35, 0.38, 0.45))
+	icon.theme_type_variation = &"AchIcon"
 	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(icon)
 
 	var text_box := VBoxContainer.new()
 	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	text_box.add_theme_constant_override("separation", 2)
+	text_box.add_theme_constant_override("separation", 4)
 	var name_label := Label.new()
 	name_label.text = str(entry.get("name", ""))
-	name_label.add_theme_font_size_override("font_size", 20)
-	name_label.add_theme_color_override("font_color", Color(0.95, 0.97, 1) if unlocked else Color(0.55, 0.6, 0.7))
+	name_label.theme_type_variation = &"AchName"
 	text_box.add_child(name_label)
 	var desc_label := Label.new()
 	desc_label.text = str(entry.get("desc", ""))
-	desc_label.add_theme_font_size_override("font_size", 14)
-	desc_label.add_theme_color_override("font_color", Color(0.72, 0.78, 0.88) if unlocked else Color(0.45, 0.5, 0.6))
+	desc_label.theme_type_variation = &"AchDesc"
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text_box.add_child(desc_label)
 	row.add_child(text_box)
 
 	var state := Label.new()
 	state.text = "UNLOCKED" if unlocked else "LOCKED"
-	state.add_theme_font_size_override("font_size", 12)
+	state.theme_type_variation = &"AchState"
 	state.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	state.add_theme_color_override("font_color", Color(1.0, 0.82, 0.3) if unlocked else Color(0.4, 0.45, 0.55))
 	row.add_child(state)
 	return row
 
