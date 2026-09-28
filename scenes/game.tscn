@@ -28,80 +28,6 @@ script = ExtResource("5_vtaks")
 [sub_resource type="Resource" id="Resource_dinhu"]
 script = ExtResource("5_vtaks")
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_hearts"]
-bg_color = Color(0.03, 0.05, 0.1, 0.55)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.35, 0.85, 1, 0.22)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_btn_normal"]
-bg_color = Color(0.1, 0.17, 0.27, 0.92)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.35, 0.85, 1, 0.4)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_btn_pressed"]
-bg_color = Color(0.06, 0.13, 0.22, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.9, 1, 1, 0.7)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_btn_hover"]
-bg_color = Color(0.16, 0.3, 0.46, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.65, 1, 1, 0.95)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_btn_focus"]
-bg_color = Color(0.14, 0.27, 0.4, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(1, 1, 1, 0.85)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bossbar_bg"]
-bg_color = Color(0.1, 0.08, 0.08, 0.9)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bossbar_fill"]
-bg_color = Color(0.9, 0.2, 0.15, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-
 [node name="Game" type="Node2D" unique_id=1861883669]
 script = ExtResource("1_game")
 
@@ -120,9 +46,9 @@ tile_set = SubResource("TileSet_0tnpc")
 
 [node name="ArenaBorder" type="Line2D" parent="." unique_id=2100000500]
 z_index = 20
-points = PackedVector2Array(0, 0, 1280, 0, 1280, 720, 0, 720, 0, 0)
-width = 3.0
-default_color = Color(0.35, 0.85, 1, 0.35)
+points = PackedVector2Array(1, 1, 1279, 1, 1279, 719, 1, 719, 1, 1)
+width = 2.0
+default_color = Color(0.35, 0.85, 1, 0.6)
 
 [node name="Camera" type="Camera2D" parent="." unique_id=835562184]
 unique_name_in_owner = true
@@ -187,72 +113,68 @@ script = ExtResource("2_debris")
 
 [node name="ScoreLabel" type="Label" parent="HUD" unique_id=1745534]
 unique_name_in_owner = true
-offset_left = 16.0
-offset_top = 12.0
-offset_right = 300.0
-offset_bottom = 46.0
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.6)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 2
-theme_override_constants/outline_size = 5
-theme_override_font_sizes/font_size = 30
+theme_type_variation = &"ReadoutHud"
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -300.0
+offset_top = 52.0
+offset_right = -16.0
+offset_bottom = 90.0
+grow_horizontal = 0
 text = "Score: 0"
+horizontal_alignment = 2
 
 [node name="WaveLabel" type="Label" parent="HUD" unique_id=995198360]
 unique_name_in_owner = true
-offset_left = 16.0
-offset_top = 52.0
-offset_right = 300.0
-offset_bottom = 78.0
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.6)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 2
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 20
+theme_type_variation = &"BodyHud"
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -300.0
+offset_top = 92.0
+offset_right = -16.0
+offset_bottom = 118.0
+grow_horizontal = 0
 text = "Wave: 1"
+horizontal_alignment = 2
 
 [node name="ComboLabel" type="Label" parent="HUD" unique_id=1491281138]
 unique_name_in_owner = true
-offset_left = 16.0
-offset_top = 84.0
-offset_right = 300.0
-offset_bottom = 116.0
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.6)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 2
-theme_override_constants/outline_size = 5
-theme_override_font_sizes/font_size = 26
+theme_type_variation = &"ReadoutHud"
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -220.0
+offset_top = 96.0
+offset_right = 220.0
+offset_bottom = 140.0
+grow_horizontal = 2
+horizontal_alignment = 1
 
 [node name="HeartsBacking" type="Panel" parent="HUD" unique_id=2100000400]
-offset_left = 10.0
-offset_top = 118.0
-offset_right = 210.0
-offset_bottom = 160.0
+unique_name_in_owner = true
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 220.0
+offset_bottom = 60.0
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_hud_hearts")
 
 [node name="Hearts" type="HBoxContainer" parent="HUD" unique_id=1369019036]
 unique_name_in_owner = true
-offset_left = 16.0
-offset_top = 122.0
-offset_right = 200.0
-offset_bottom = 154.0
-theme_override_constants/separation = 6
+offset_left = 26.0
+offset_top = 22.0
+offset_right = 210.0
+offset_bottom = 54.0
+theme_override_constants/separation = 8
 
 [node name="ShieldIcon" type="TextureRect" parent="HUD" unique_id=1936173011]
 unique_name_in_owner = true
 visible = false
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -150.0
-offset_top = 64.0
-offset_right = -104.0
-offset_bottom = 110.0
-grow_horizontal = 0
+offset_left = 232.0
+offset_top = 20.0
+offset_right = 272.0
+offset_bottom = 60.0
 texture = ExtResource("4_shieldtex")
 expand_mode = 1
 stretch_mode = 5
@@ -260,14 +182,10 @@ stretch_mode = 5
 [node name="MagnetIcon" type="TextureRect" parent="HUD" unique_id=537410640]
 unique_name_in_owner = true
 visible = false
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -104.0
-offset_top = 64.0
-offset_right = -58.0
-offset_bottom = 110.0
-grow_horizontal = 0
+offset_left = 280.0
+offset_top = 20.0
+offset_right = 320.0
+offset_bottom = 60.0
 texture = ExtResource("5_magnetex")
 expand_mode = 1
 stretch_mode = 5
@@ -280,16 +198,9 @@ anchor_right = 1.0
 offset_left = -150.0
 offset_top = 12.0
 offset_right = -16.0
-offset_bottom = 52.0
+offset_bottom = 44.0
 grow_horizontal = 0
-theme_override_colors/font_color = Color(0.85, 0.97, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
-theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 18
-theme_override_styles/normal = SubResource("StyleBoxFlat_hud_btn_normal")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_hud_btn_pressed")
-theme_override_styles/hover = SubResource("StyleBoxFlat_hud_btn_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_hud_btn_focus")
+theme_type_variation = &"Hud"
 text = "Menu"
 
 [node name="Banner" type="Label" parent="HUD" unique_id=167847359]
@@ -306,12 +217,7 @@ offset_right = 300.0
 offset_bottom = 80.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.6)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
-theme_override_constants/shadow_offset_x = 3
-theme_override_constants/shadow_offset_y = 3
-theme_override_constants/outline_size = 10
-theme_override_font_sizes/font_size = 64
+theme_type_variation = &"Display"
 text = "WAVE 1"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -340,13 +246,7 @@ theme_override_constants/separation = 4
 
 [node name="BossTitle" type="Label" parent="HUD/BossBar" unique_id=2100000005]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.5, 0.3, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.6)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 0.9)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 2
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"BossTitle"
 text = "WAVE 50 BOSS"
 horizontal_alignment = 1
 
@@ -354,8 +254,6 @@ horizontal_alignment = 1
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 22)
 layout_mode = 2
-theme_override_styles/background = SubResource("StyleBoxFlat_bossbar_bg")
-theme_override_styles/fill = SubResource("StyleBoxFlat_bossbar_fill")
 show_percentage = false
 
 [node name="GameOver" type="CanvasLayer" parent="." unique_id=70316299]
@@ -376,7 +274,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.7)
+color = Color(0.02, 0.04, 0.08, 0.86)
 
 [node name="Center" type="CenterContainer" parent="GameOver/GameOverPanel" unique_id=440744366]
 layout_mode = 0
@@ -387,25 +285,33 @@ grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="GameOver/GameOverPanel/Center" unique_id=919848064]
 layout_mode = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 16
 
 [node name="Title" type="Label" parent="GameOver/GameOverPanel/Center/VBox" unique_id=1517744111]
 layout_mode = 2
-theme_override_font_sizes/font_size = 64
+theme_type_variation = &"Display"
 text = "GAME OVER"
+horizontal_alignment = 1
+
+[node name="NewBest" type="Label" parent="GameOver/GameOverPanel/Center/VBox" unique_id=1554992206]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"Badge"
+text = "NEW BEST!"
 horizontal_alignment = 1
 
 [node name="FinalScore" type="Label" parent="GameOver/GameOverPanel/Center/VBox" unique_id=1541868344]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 30
+theme_type_variation = &"Readout"
 text = "Score: 0"
 horizontal_alignment = 1
 
 [node name="FinalBest" type="Label" parent="GameOver/GameOverPanel/Center/VBox" unique_id=1554992205]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 22
+theme_type_variation = &"Small"
 text = "Best: 0"
 horizontal_alignment = 1
 
@@ -413,13 +319,13 @@ horizontal_alignment = 1
 unique_name_in_owner = true
 custom_minimum_size = Vector2(240, 52)
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_type_variation = &"Primary"
 text = "Play Again"
 
 [node name="GameOverMenuButton" type="Button" parent="GameOver/GameOverPanel/Center/VBox" unique_id=329137696]
 custom_minimum_size = Vector2(240, 52)
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_type_variation = &"Ghost"
 text = "Menu"
 
 [node name="UpgradeLayer" type="CanvasLayer" parent="." unique_id=80219901]
@@ -442,7 +348,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.03, 0.05, 0.1, 0.82)
+color = Color(0.02, 0.04, 0.08, 0.86)
 
 [node name="Center" type="CenterContainer" parent="UpgradeLayer/UpgradePanel" unique_id=1447021962]
 layout_mode = 0
@@ -453,25 +359,24 @@ grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="UpgradeLayer/UpgradePanel/Center" unique_id=1869328655]
 layout_mode = 2
-theme_override_constants/separation = 30
+theme_override_constants/separation = 32
 
 [node name="Title" type="Label" parent="UpgradeLayer/UpgradePanel/Center/VBox" unique_id=1188361339]
 layout_mode = 2
-theme_override_font_sizes/font_size = 48
+theme_type_variation = &"TitleHud"
 text = "CHOOSE AN UPGRADE"
 horizontal_alignment = 1
 
 [node name="Cards" type="HBoxContainer" parent="UpgradeLayer/UpgradePanel/Center/VBox" unique_id=1421412515]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 28
+theme_override_constants/separation = 24
 alignment = 1
 
 [node name="Hint" type="Label" parent="UpgradeLayer/UpgradePanel/Center/VBox" unique_id=975220334]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.62, 0.68, 0.8, 1)
-theme_override_font_sizes/font_size = 18
+theme_type_variation = &"SmallHud"
 text = "Press 1 / 2 / 3 or click to choose"
 horizontal_alignment = 1
 
@@ -495,7 +400,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.02, 0.04, 0.08, 0.78)
+color = Color(0.02, 0.04, 0.08, 0.86)
 
 [node name="Center" type="CenterContainer" parent="PauseLayer/PausePanel" unique_id=2100000103]
 layout_mode = 0
@@ -506,12 +411,11 @@ grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="PauseLayer/PausePanel/Center" unique_id=2100000104]
 layout_mode = 2
-theme_override_constants/separation = 22
+theme_override_constants/separation = 24
 
 [node name="Title" type="Label" parent="PauseLayer/PausePanel/Center/VBox" unique_id=2100000105]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.95, 1, 1)
-theme_override_font_sizes/font_size = 56
+theme_type_variation = &"Display"
 text = "PAUSED"
 horizontal_alignment = 1
 
@@ -519,13 +423,13 @@ horizontal_alignment = 1
 unique_name_in_owner = true
 custom_minimum_size = Vector2(240, 52)
 layout_mode = 2
-theme_override_font_sizes/font_size = 22
+theme_type_variation = &"Primary"
 text = "Resume"
 
 [node name="PauseMenuButton" type="Button" parent="PauseLayer/PausePanel/Center/VBox" unique_id=2100000107]
 custom_minimum_size = Vector2(240, 52)
 layout_mode = 2
-theme_override_font_sizes/font_size = 22
+theme_type_variation = &"Ghost"
 text = "Menu"
 
 [node name="TouchControls" parent="." unique_id=1589367961 instance=ExtResource("10_touch")]

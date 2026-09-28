@@ -52,6 +52,7 @@ const BUFFS := {
 @onready var wave_label: Label = %WaveLabel
 @onready var combo_label: Label = %ComboLabel
 @onready var hearts: HBoxContainer = %Hearts
+@onready var hearts_backing: Panel = %HeartsBacking
 @onready var shield_icon: TextureRect = %ShieldIcon
 @onready var magnet_icon: TextureRect = %MagnetIcon
 @onready var banner: Label = %Banner
@@ -59,6 +60,7 @@ const BUFFS := {
 @onready var game_over_panel: Control = %GameOverPanel
 @onready var final_score: Label = %FinalScore
 @onready var final_best: Label = %FinalBest
+@onready var new_best: Label = %NewBest
 @onready var retry_button: Button = %RetryButton
 @onready var menu_button: Button = %MenuButton
 @onready var upgrade_panel: Control = %UpgradePanel
@@ -89,6 +91,10 @@ var _current_choices: Array[String] = []
 var _coins_collected := 0
 var _max_combo_mult := 0
 var _hit_this_wave := false
+## Low-health visual state: the health cluster pulses (colour AND motion) once
+## HP drops to a single heart, so the warning reads even without colour vision.
+var _low_hp := false
+var _low_hp_tween: Tween
 
 var _heart_tex := preload("res://assets/generated/powerup_heart_frame_0.png")
 var _heart_rects: Array[TextureRect] = []
@@ -547,10 +553,18 @@ func _tick_combo(delta: float) -> void:
 func _update_combo_ui() -> void:
 	var mult := _combo_multiplier()
 	if _combo > 0 and mult > 1:
-		combo_label.text = "COMBO x%d" % mult
+		var label := "COMBO x%d" % mult
+		var stepped_up := combo_label.text != label
+		combo_label.text = label
 		combo_label.modulate = Color(1.0, 0.62, 0.2)
+		if stepped_up:
+			combo_label.pivot_offset = combo_label.size * 0.5
+			combo_label.scale = Vector2(1.25, 1.25)
+			var tw := combo_label.create_tween()
+			tw.tween_property(combo_label, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	else:
 		combo_label.text = ""
+		combo_label.scale = Vector2.ONE
 
 func _tick_magnet(delta: float) -> void:
 	if player.magnet_left <= 0.0:
@@ -670,6 +684,7 @@ func _build_card(id: String) -> Button:
 	var btn := Button.new()
 	btn.custom_minimum_size = Vector2(230, 300)
 	btn.focus_mode = Control.FOCUS_ALL
+	btn.theme_type_variation = &"Card"
 	var box := VBoxContainer.new()
 	box.set_anchors_preset(Control.PRESET_FULL_RECT)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -683,28 +698,27 @@ func _build_card(id: String) -> Button:
 	var name_label := Label.new()
 	name_label.text = str(meta["name"])
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 24)
+	name_label.theme_type_variation = &"Heading"
 	box.add_child(name_label)
 	var desc_label := Label.new()
 	desc_label.text = str(meta["desc"])
 	desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc_label.add_theme_font_size_override("font_size", 15)
+	desc_label.theme_type_variation = &"Small"
 	box.add_child(desc_label)
 	# Footer chip: makes stack-vs-one-off clarity impossible to miss.
 	var chip := Label.new()
 	chip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	chip.add_theme_font_size_override("font_size", 13)
 	if meta.has("one_off"):
 		chip.text = "ONCE PER RUN"
-		chip.add_theme_color_override("font_color", Color(1.0, 0.82, 0.3))
+		chip.theme_type_variation = &"ChipOnce"
 	elif meta.get("repeat", false):
 		chip.text = "REPEATABLE  (taken %d)" % int(_repeat_counts.get(id, 0))
-		chip.add_theme_color_override("font_color", Color(0.72, 1.0, 0.6))
+		chip.theme_type_variation = &"ChipRepeat"
 	else:
 		var used := int(_stack_counts.get(id, 0))
 		chip.text = "STACK  %d / %d" % [used + 1, int(meta["stack"])]
-		chip.add_theme_color_override("font_color", Color(0.55, 0.95, 1.0))
+		chip.theme_type_variation = &"ChipStack"
 	box.add_child(chip)
 	btn.add_child(box)
 	btn.pressed.connect(_on_upgrade_chosen.bind(id))
@@ -790,6 +804,9 @@ func _on_player_died() -> void:
 	Fx.hitstop(0.28)
 	Sfx.play("gameover")
 	Music.play("gameover")
+	# A new record beats the stored best at the moment of death; show it as a
+	# distinct badge without disturbing the existing "Best:" line format.
+	var is_new_best := GameState.score > 0 and GameState.score >= GameState.best_score
 	GameState.save_best()
 	await get_tree().create_timer(0.8).timeout
 	if not is_inside_tree():
@@ -797,6 +814,7 @@ func _on_player_died() -> void:
 	game_over_panel.visible = true
 	final_score.text = "Score: %d" % GameState.score
 	final_best.text = "Best: %d" % GameState.best_score
+	new_best.visible = is_new_best
 
 func _flash_tint() -> void:
 	hit_tint.color.a = 0.4
@@ -825,6 +843,28 @@ func _update_hearts() -> void:
 	for i in _heart_rects.size():
 		var filled := i < player.hp
 		_heart_rects[i].modulate = Color.WHITE if filled else Color(1, 1, 1, 0.22)
+	_set_low_hp(player.hp <= 1)
+
+## Low HP must read as danger: the whole health cluster pulses red (colour +
+## motion) rather than just recolouring one heart.
+func _set_low_hp(low: bool) -> void:
+	if low == _low_hp:
+		return
+	_low_hp = low
+	if _low_hp_tween != null and _low_hp_tween.is_valid():
+		_low_hp_tween.kill()
+	if low:
+		hearts_backing.pivot_offset = hearts_backing.size * 0.5
+		_low_hp_tween = hearts_backing.create_tween().set_loops()
+		_low_hp_tween.set_parallel(true)
+		_low_hp_tween.tween_property(hearts_backing, "modulate", Color(1.0, 0.45, 0.4, 1.0), 0.35)
+		_low_hp_tween.tween_property(hearts_backing, "scale", Vector2(1.06, 1.06), 0.35)
+		_low_hp_tween.chain().set_parallel(true)
+		_low_hp_tween.tween_property(hearts_backing, "modulate", Color.WHITE, 0.35)
+		_low_hp_tween.tween_property(hearts_backing, "scale", Vector2.ONE, 0.35)
+	else:
+		hearts_backing.modulate = Color.WHITE
+		hearts_backing.scale = Vector2.ONE
 
 func _on_shield_changed(_active: bool) -> void:
 	_update_power_icons()
