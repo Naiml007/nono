@@ -14,21 +14,34 @@ const BOSS_WAVE := 50
 const BATTLE_TIER_SIZE := 5   # waves per battle-music intensity tier
 
 const ARENA := Vector2(1280, 720)
+## Boss-cam zoom-in relative to the player cam (reads as 20% tighter). Applied
+## on top of the aspect-driven minimum zoom so it survives non-16:9 viewports.
+const BOSS_ZOOM := 1.2
 const COMBO_WINDOW := 3.0
 const COMBO_STEP := 4   # Coins collected per multiplier step.
+## The PhantomCameraHost processes at priority 300; running Game's camera-zoom
+## floor afterwards guarantees the clamp wins for the frame.
+const CAMERA_PROCESS_PRIORITY := 400
 
 # Wave-clear upgrade pool. "stack" = max times that buff can be stacked;
 # "one_off" = picked at most once per run.
 const BUFFS := {
-	"speed": {"name": "Speed Boost", "desc": "+20% move speed", "icon": "res://assets/generated/icon_bolt_frame_0.png", "stack": 3},
-	"dash": {"name": "Dash Mastery", "desc": "-25% dash cooldown, +35% dash distance", "icon": "res://assets/generated/icon_swirl_frame_0.png", "stack": 3},
-	"magnet": {"name": "Magnet Coil", "desc": "Permanent magnet radius +110", "icon": "res://assets/generated/powerup_magnet_frame_0.png", "stack": 3},
+	"speed": {"name": "Speed Boost", "desc": "+20% move speed", "icon": "res://assets/generated/icon_bolt_frame_0.png", "stack": 5},
+	"dash": {"name": "Dash Mastery", "desc": "-25% dash cooldown, +35% dash distance", "icon": "res://assets/generated/icon_swirl_frame_0.png", "stack": 4},
+	"magnet": {"name": "Magnet Coil", "desc": "Permanent magnet radius +110", "icon": "res://assets/generated/powerup_magnet_frame_0.png", "stack": 4},
 	"shield": {"name": "Shield Charge", "desc": "Absorb one hit", "icon": "res://assets/generated/powerup_shield_frame_0.png", "one_off": true},
 	"heal": {"name": "Nano Repair", "desc": "Repair +2 HP", "icon": "res://assets/generated/powerup_heart_frame_0.png", "one_off": true},
 	"maxhp": {"name": "Overclock", "desc": "+1 max HP and repair 1", "icon": "res://assets/generated/powerup_heart_frame_0.png", "one_off": true},
-	"combo": {"name": "Combo Sense", "desc": "Combo window +2.0s", "icon": "res://assets/generated/icon_star_frame_0.png", "stack": 3},
-	"value": {"name": "Coin Value", "desc": "Coins are worth +2 each", "icon": "res://assets/generated/icon_arrow_frame_0.png", "stack": 5},
+	"combo": {"name": "Combo Sense", "desc": "Combo window +2.0s", "icon": "res://assets/generated/icon_star_frame_0.png", "stack": 4},
+	"value": {"name": "Coin Value", "desc": "Coins are worth +2 each", "icon": "res://assets/generated/icon_arrow_frame_0.png", "stack": 6},
 	"shock": {"name": "Shockwave", "desc": "Dash blasts enemies nearby", "icon": "res://assets/generated/icon_shock_frame_0.png", "one_off": true},
+	# Repeatable, always-eligible entries ("repeat": true, never exhausted). The
+	# finite stacks above alone run dry around wave 10; these keep the wave-clear
+	# panel populated for the whole 50-wave run (and their effects are bounded so
+	# a very long endless run can't run away).
+	"overcharge": {"name": "Overcharge", "desc": "+250 score, +3% move speed", "icon": "res://assets/generated/icon_bolt_frame_0.png", "repeat": true},
+	"repair": {"name": "Nano Patch", "desc": "Repair +2 HP (or +150 score if full)", "icon": "res://assets/generated/powerup_heart_frame_0.png", "repeat": true},
+	"reserve": {"name": "Reserve Cells", "desc": "Gain a shield (or +250 score if shielded)", "icon": "res://assets/generated/powerup_shield_frame_0.png", "repeat": true},
 }
 
 @onready var player: Player = %Player
@@ -50,6 +63,7 @@ const BUFFS := {
 @onready var menu_button: Button = %MenuButton
 @onready var upgrade_panel: Control = %UpgradePanel
 @onready var upgrade_cards: HBoxContainer = %Cards
+@onready var upgrade_hint: Label = %Hint
 @onready var boss_bar: Control = %BossBar
 @onready var boss_health: ProgressBar = %BossHealth
 @onready var player_cam: Node2D = %PlayerCam
@@ -69,6 +83,8 @@ var _combo_window: float = COMBO_WINDOW
 var _coin_value_bonus := 0
 var _taken_one_offs: Array[String] = []
 var _stack_counts: Dictionary = {}
+var _repeat_counts: Dictionary = {}
+var _banner_tween: Tween
 var _current_choices: Array[String] = []
 var _coins_collected := 0
 var _max_combo_mult := 0
@@ -76,9 +92,21 @@ var _hit_this_wave := false
 
 var _heart_tex := preload("res://assets/generated/powerup_heart_frame_0.png")
 var _heart_rects: Array[TextureRect] = []
+## Cached live coins (rebuilt each wave, pruned as they are collected) so the
+## magnet tick doesn't allocate a fresh group Array every frame.
+var _coins: Array[Coin] = []
+## Minimum camera zoom for the current viewport (see _apply_camera_bounds). The
+## visible world rect is viewport/zoom, so this floor keeps it inside the arena.
+var _camera_floor := 1.0
+## Bumped by a debug wave jump so a stale pending next-wave coroutine aborts
+## instead of clobbering the jump one second later.
+var _wave_epoch := 0
 
 func _ready() -> void:
 	_rng.randomize()
+	# Defensive: a hitstop overlapping a scene change could otherwise leave the
+	# engine frozen at time_scale == 0 for the whole new run.
+	Engine.time_scale = 1.0
 	GameState.reset_run()
 	Fx.setup(self, camera)
 	upgrade_panel.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -87,10 +115,28 @@ func _ready() -> void:
 	_update_hearts()
 	_update_power_icons()
 	_update_ui()
+	# Camera bounds must be in place before the first frame renders: apply them
+	# now, keep them correct when the window/viewport is resized, and re-pin the
+	# host limits whenever the PhantomCamera addon forwards its own.
+	process_priority = CAMERA_PROCESS_PRIORITY
+	_apply_camera_bounds()
+	if not get_viewport().size_changed.is_connected(_apply_camera_bounds):
+		get_viewport().size_changed.connect(_apply_camera_bounds)
+	var pcam_manager := get_node_or_null("/root/PhantomCameraManager")
+	if pcam_manager != null and pcam_manager.has_signal("limit_2d_changed") \
+			and not pcam_manager.limit_2d_changed.is_connected(_on_pcam_limit_changed):
+		pcam_manager.limit_2d_changed.connect(_on_pcam_limit_changed)
+	Debug.register(self)
 	Music.play("battle")
 	_start_wave(1)
 
+func _exit_tree() -> void:
+	Debug.unregister(self)
+
 func _process(delta: float) -> void:
+	# Enforce the aspect-driven zoom floor on the live host camera every frame so
+	# the invariant holds even mid-tween (e.g. resizing during the boss zoom-in).
+	_enforce_camera_floor()
 	if _game_over:
 		return
 	_tick_combo(delta)
@@ -143,6 +189,7 @@ func _wire() -> void:
 func _start_wave(n: int) -> void:
 	_clear_leftover_hearts()
 	_clear_leftover_coins()
+	_clear_leftover_powerups()
 	if n == BOSS_WAVE:
 		_start_boss_wave()
 		return
@@ -240,11 +287,16 @@ func _show_boss_ui(boss: Boss) -> void:
 func _hide_boss_ui() -> void:
 	boss_bar.visible = false
 
+## Restore the normal (player) camera. Also called on player death so the
+## game-over screen never renders through the still-active boss camera.
+func _reset_boss_cam() -> void:
+	if boss_cam != null:
+		boss_cam.set("priority", 0)
+
 func _on_boss_died(boss: Boss) -> void:
 	_alive_enemies -= 1
 	_hide_boss_ui()
-	if boss_cam != null:
-		boss_cam.set("priority", 0)
+	_reset_boss_cam()
 	# Endless mode continues past wave 50: hand the music back to the
 	# intensified battle track instead of letting the boss theme play forever.
 	Music.play_battle_tier(_battle_tier)
@@ -274,6 +326,15 @@ func _clear_leftover_coins() -> void:
 		if is_instance_valid(node):
 			node.queue_free()
 
+## Magnet and shield power-ups are not heart pickups, so they used to survive
+## every wave boundary and accumulate for the whole run (each one an Area2D
+## running _process and drawing through a shader). Clear the whole "powerups"
+## group at the wave boundary to keep the arena's node count flat.
+func _clear_leftover_powerups() -> void:
+	for node in get_tree().get_nodes_in_group("powerups"):
+		if is_instance_valid(node):
+			node.queue_free()
+
 func _on_enemy_died(e: Enemy) -> void:
 	_alive_enemies -= 1
 	_maybe_drop_powerup(e.global_position)
@@ -288,14 +349,147 @@ func _maybe_unlock_untouchable() -> void:
 		Achievements.unlock("untouchable")
 
 func _start_next_wave() -> void:
+	# Capture the epoch: a debug wave jump bumps it, so a pending next-wave
+	# coroutine aborts rather than clobbering the jump a moment later.
+	var epoch := _wave_epoch
 	await get_tree().create_timer(1.0).timeout
-	if _game_over or not is_inside_tree():
+	if _game_over or not is_inside_tree() or epoch != _wave_epoch:
 		return
 	_pending_wave = false
 	await _offer_upgrades()
-	if _game_over or not is_inside_tree():
+	if _game_over or not is_inside_tree() or epoch != _wave_epoch:
 		return
 	_start_wave(_wave + 1)
+
+# --- Camera bounds ---------------------------------------------------------
+#
+# The visible world rect is `viewport_size / zoom`. With stretch aspect "expand"
+# the viewport can be larger than the 1280x720 arena (any non-16:9 window, and
+# landscape phones), so no camera limit alone can keep the view inside the
+# arena: the rect itself is bigger. We therefore enforce a minimum zoom derived
+# from the arena, and pin the host Camera2D limits to the arena so the existing
+# clamp can actually centre the (now arena-sized-or-smaller) view.
+
+## Arena rect in world space, the single source of truth for camera bounds.
+func arena_rect() -> Rect2:
+	return Rect2(Vector2.ZERO, ARENA)
+
+## Recompute the zoom floor for the current viewport and apply it to both
+## PhantomCameras, then pin the host camera limits. Called on _ready and on
+## every viewport size change, and re-pins limits whenever the addon forwards
+## its own (it emits unlimited defaults when a pcam tween begins).
+func _apply_camera_bounds() -> void:
+	var view: Vector2 = get_viewport().get_visible_rect().size
+	var floor_zoom := 1.0
+	if view.x > 0.0 and view.y > 0.0:
+		floor_zoom = maxf(view.x / ARENA.x, view.y / ARENA.y)
+	# A viewport smaller than the arena is already contained; don't zoom below
+	# 1:1 (that would only blur the arena).
+	_camera_floor = maxf(floor_zoom, 1.0)
+	player_cam.set("zoom", Vector2(_camera_floor, _camera_floor))
+	boss_cam.set("zoom", Vector2(BOSS_ZOOM * _camera_floor, BOSS_ZOOM * _camera_floor))
+	_apply_host_limits()
+	# Mirror the arena onto the PhantomCameras so the addon re-emits it (rather
+	# than its own defaults) whenever it talks to the host camera.
+	for pcam: Node2D in [player_cam, boss_cam]:
+		pcam.set("limit_left", 0)
+		pcam.set("limit_top", 0)
+		pcam.set("limit_right", int(ARENA.x))
+		pcam.set("limit_bottom", int(ARENA.y))
+	# Also clamp the live camera immediately, so a resize that happens while the
+	# tree is paused (the host won't tick) still can't show beyond the arena.
+	_enforce_camera_floor()
+
+## Hard-pin the host Camera2D limits to the arena.
+func _apply_host_limits() -> void:
+	camera.limit_left = 0
+	camera.limit_top = 0
+	camera.limit_right = int(ARENA.x)
+	camera.limit_bottom = int(ARENA.y)
+
+## The addon emits limit changes through the manager singleton; re-pin the
+## arena so its unlimited defaults can never leak into the host camera.
+func _on_pcam_limit_changed(_side: int, _limit: int) -> void:
+	_apply_host_limits()
+
+## Keep the live host camera at or above the zoom floor. Runs after the
+## PhantomCameraHost each frame so a mid-tween zoom can't dip below the floor.
+func _enforce_camera_floor() -> void:
+	if camera.zoom.x >= _camera_floor and camera.zoom.y >= _camera_floor:
+		return
+	var z := camera.zoom
+	if z.x < _camera_floor:
+		z.x = _camera_floor
+	if z.y < _camera_floor:
+		z.y = _camera_floor
+	camera.zoom = z
+
+# --- Debug hooks (driven by the Debug autoload; inert otherwise) -----------
+
+## Jump straight to wave `n`. Routes through _start_wave so n == BOSS_WAVE
+## still takes the boss path. Clears the current wave's spawns first.
+func debug_goto_wave(n: int) -> void:
+	if _game_over:
+		return
+	_wave_epoch += 1
+	_pending_wave = false
+	_clear_enemies_now()
+	_start_wave(clampi(n, 1, BOSS_WAVE))
+
+## Instantly clear the current wave and advance one wave.
+func debug_skip_wave() -> void:
+	if _game_over:
+		return
+	_wave_epoch += 1
+	_pending_wave = false
+	_clear_enemies_now()
+	_start_wave(mini(_wave + 1, BOSS_WAVE))
+
+## Kill every enemy (and the boss) without scoring. Existing death handlers
+## advance the wave, so this doubles as a fast wave clearer.
+func debug_kill_all_enemies() -> void:
+	for node in get_tree().get_nodes_in_group("enemies"):
+		var e := node as Enemy
+		if e != null and is_instance_valid(e):
+			e.die(false)
+	for node in get_tree().get_nodes_in_group("boss"):
+		var b := node as Boss
+		if b != null and is_instance_valid(b):
+			b.die(false)
+
+## Restart the run back to wave 1. Reloads the scene when this Game is the
+## current scene (full reset); otherwise resets in place (test harnesses).
+func debug_reset_run() -> void:
+	Engine.time_scale = 1.0
+	get_tree().paused = false
+	if get_tree().current_scene == self:
+		get_tree().reload_current_scene()
+		return
+	_wave_epoch += 1
+	GameState.reset_run()
+	_clear_enemies_now()
+	_clear_leftover_powerups()
+	_clear_leftover_coins()
+	_pending_wave = false
+	_game_over = false
+	game_over_panel.visible = false
+	player.hp = player.max_hp
+	player.has_shield = false
+	player.magnet_left = 0.0
+	player.shield_changed.emit(false)
+	_update_power_icons()
+	_start_wave(1)
+
+## Free every enemy/boss instantly (deferred) and reset the wave counter. Used
+## by the debug jumps so leftovers never stack onto the new wave.
+func _clear_enemies_now() -> void:
+	for node in get_tree().get_nodes_in_group("enemies"):
+		if is_instance_valid(node):
+			node.queue_free()
+	for node in get_tree().get_nodes_in_group("boss"):
+		if is_instance_valid(node):
+			node.queue_free()
+	_alive_enemies = 0
 
 # --- Coins / debris field --------------------------------------------------
 
@@ -305,9 +499,13 @@ func _scatter_coins() -> void:
 	debris_field.max_jitter = 44
 	debris_field.spawn_density = 0.5
 	debris_field.generate_debris_field(int(ARENA.x), int(ARENA.y))
+	_coins.clear()
 	for node in get_tree().get_nodes_in_group("coins"):
 		var c := node as Coin
-		if c != null and not c.collected.is_connected(_on_coin_collected):
+		if c == null:
+			continue
+		_coins.append(c)
+		if not c.collected.is_connected(_on_coin_collected):
 			c.collected.connect(_on_coin_collected)
 
 func _on_coin_collected(c: Coin) -> void:
@@ -331,6 +529,7 @@ func _on_coin_collected(c: Coin) -> void:
 		if _max_combo_mult >= 5:
 			Achievements.unlock("combo_x5")
 	_coins_collected += 1
+	_coins.erase(c)
 	if _coins_collected >= 100:
 		Achievements.unlock("coins_100")
 	_update_ui()
@@ -356,13 +555,14 @@ func _update_combo_ui() -> void:
 func _tick_magnet(delta: float) -> void:
 	if player.magnet_left <= 0.0:
 		return
-	for node in get_tree().get_nodes_in_group("coins"):
-		var c := node as Coin
-		if c == null or not is_instance_valid(c):
+	var radius := player.effective_magnet_radius()
+	var target := player.global_position
+	for c in _coins:
+		if not is_instance_valid(c):
 			continue
-		var d := c.global_position.distance_to(player.global_position)
-		if d < player.effective_magnet_radius() and d > 1.0:
-			c.global_position = c.global_position.move_toward(player.global_position, 640.0 * delta)
+		var d := c.global_position.distance_to(target)
+		if d < radius and d > 1.0:
+			c.global_position = c.global_position.move_toward(target, 640.0 * delta)
 
 # --- Power-ups -------------------------------------------------------------
 
@@ -408,6 +608,11 @@ func _offer_upgrades() -> void:
 		return
 	_show_upgrade_panel(_current_choices)
 	get_tree().paused = true
+	# The touch buttons render above this panel; disable them so a paused-tree
+	# tap can't fire a phantom dash that burns the cooldown, and so they don't
+	# sit on top of the cards.
+	if touch_controls != null:
+		touch_controls.set_controls_enabled(false)
 	var id: String = await upgrade_chosen
 	if not is_inside_tree():
 		return
@@ -415,12 +620,20 @@ func _offer_upgrades() -> void:
 	get_tree().paused = false
 	if _game_over:
 		return
+	# Re-enable the on-screen controls only on a live resume (a game over keeps
+	# them disabled so they never float over the game-over panel).
+	if touch_controls != null:
+		touch_controls.set_controls_enabled(true)
 	_apply_buff(id)
 
 func _pick_upgrade_choices() -> Array[String]:
 	var pool: Array[String] = []
 	for id in BUFFS:
 		var meta: Dictionary = BUFFS[id]
+		# Repeatable entries are always available, so the pool can never empty.
+		if meta.get("repeat", false):
+			pool.append(id)
+			continue
 		if meta.has("one_off") and _taken_one_offs.has(id):
 			continue
 		if meta.has("stack") and int(_stack_counts.get(id, 0)) >= int(meta["stack"]):
@@ -437,6 +650,14 @@ func _show_upgrade_panel(choices: Array[String]) -> void:
 		child.queue_free()
 	for id in choices:
 		upgrade_cards.add_child(_build_card(id))
+	# Reflect the real card count in the hint instead of hardcoding "1 / 2 / 3".
+	if choices.size() >= 3:
+		upgrade_hint.text = "Press 1 / 2 / 3 or click to choose"
+	else:
+		var keys := PackedStringArray()
+		for i in choices.size():
+			keys.append(str(i + 1))
+		upgrade_hint.text = "Press %s or click to choose" % " / ".join(keys)
 	upgrade_panel.visible = true
 
 func _hide_upgrade_panel() -> void:
@@ -477,6 +698,9 @@ func _build_card(id: String) -> Button:
 	if meta.has("one_off"):
 		chip.text = "ONCE PER RUN"
 		chip.add_theme_color_override("font_color", Color(1.0, 0.82, 0.3))
+	elif meta.get("repeat", false):
+		chip.text = "REPEATABLE  (taken %d)" % int(_repeat_counts.get(id, 0))
+		chip.add_theme_color_override("font_color", Color(0.72, 1.0, 0.6))
 	else:
 		var used := int(_stack_counts.get(id, 0))
 		chip.text = "STACK  %d / %d" % [used + 1, int(meta["stack"])]
@@ -521,8 +745,24 @@ func _apply_buff(id: String) -> void:
 			_coin_value_bonus += 2
 		"shock":
 			player.shockwave = true
+		"overcharge":
+			GameState.add_score(250)
+			player.speed_mult = minf(player.speed_mult * 1.03, 2.6)
+		"repair":
+			if player.hp < player.max_hp:
+				player.heal(2)
+			else:
+				GameState.add_score(150)
+		"reserve":
+			if not player.has_shield:
+				player.has_shield = true
+				player.shield_changed.emit(true)
+			else:
+				GameState.add_score(250)
 	if meta.has("one_off"):
 		_taken_one_offs.append(id)
+	elif meta.get("repeat", false):
+		_repeat_counts[id] = int(_repeat_counts.get(id, 0)) + 1
 	else:
 		_stack_counts[id] = int(_stack_counts.get(id, 0)) + 1
 	_update_power_icons()
@@ -541,6 +781,9 @@ func _on_player_hit() -> void:
 
 func _on_player_died() -> void:
 	_game_over = true
+	# Dying during the wave-50 fight must not leave the boss camera zoom active
+	# behind the game-over screen.
+	_reset_boss_cam()
 	touch_controls.set_controls_enabled(false)
 	Fx.burst(player.global_position, Color(1.0, 0.5, 0.3), 42, 460, 1.0, 1.8)
 	Fx.shake(16.0, 0.5)
@@ -605,7 +848,12 @@ func _show_banner(text: String) -> void:
 	banner.modulate.a = 0.0
 	banner.scale = Vector2(0.6, 0.6)
 	banner.visible = true
+	# Kill any in-flight banner tween: its fade-out callback could otherwise
+	# hide a banner that was just shown.
+	if _banner_tween != null and _banner_tween.is_valid():
+		_banner_tween.kill()
 	var tw := banner.create_tween()
+	_banner_tween = tw
 	tw.set_parallel(true)
 	tw.tween_property(banner, "modulate:a", 1.0, 0.15)
 	tw.tween_property(banner, "scale", Vector2.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -614,9 +862,14 @@ func _show_banner(text: String) -> void:
 	tw.tween_callback(func() -> void: banner.visible = false)
 
 func _retry() -> void:
+	# reload_current_scene() does NOT reset SceneTree.paused or the engine time
+	# scale, so a retry from a paused/over state would boot a frozen run.
+	Engine.time_scale = 1.0
+	get_tree().paused = false
 	get_tree().reload_current_scene()
 
 func _to_menu() -> void:
 	# Leave paused state first so the menu isn't frozen.
+	Engine.time_scale = 1.0
 	_set_paused(false)
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")

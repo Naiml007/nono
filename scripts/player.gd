@@ -33,6 +33,11 @@ var dash_speed_mult: float = 1.0
 var magnet_radius_bonus: float = 0.0
 var shockwave: bool = false
 
+## Debug-only: while true the player ignores all damage and the dash cooldown
+## never blocks. Set exclusively by the Debug autoload (god mode) and false in
+## every normal run, so gameplay is byte-identical when debugging is off.
+var debug_god: bool = false
+
 var _facing := Vector2.RIGHT
 var _dash_dir := Vector2.RIGHT
 var _dash_left := 0.0
@@ -83,7 +88,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		try_dash()
 
 func _can_dash() -> bool:
-	return _cd_left <= 0.0 and not is_dashing
+	return (debug_god or _cd_left <= 0.0) and not is_dashing
 
 ## Public dash entry point — the on-screen touch dash button calls this, and
 ## it shares the exact same implementation as the keyboard (action) and mouse
@@ -124,7 +129,7 @@ func on_enemy_contact(enemy: Enemy) -> void:
 		if not is_dashing and _invuln_left <= 0.0:
 			apply_boss_damage()
 		return
-	if is_dashing or _invuln_left > 0.0:
+	if is_invulnerable():
 		enemy.die(true)
 		return
 	if has_shield:
@@ -150,7 +155,7 @@ func on_enemy_contact(enemy: Enemy) -> void:
 ## Player takes damage from the boss or its projectiles. Dash i-frames,
 ## invulnerability and the shield all block it, and it does not kill the attacker.
 func apply_boss_damage() -> void:
-	if _dead or is_dashing or _invuln_left > 0.0:
+	if _dead or is_invulnerable():
 		return
 	if has_shield:
 		has_shield = false
@@ -212,7 +217,7 @@ func _clamp_to_screen() -> void:
 	)
 
 func is_invulnerable() -> bool:
-	return _invuln_left > 0.0 or is_dashing
+	return _invuln_left > 0.0 or is_dashing or debug_god
 
 func heal(amount: int) -> void:
 	if _dead:

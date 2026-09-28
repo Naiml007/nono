@@ -63,8 +63,11 @@ func _ready() -> void:
 	game.player._dead = false
 	game.player.hp = 1
 	game.player._invuln_left = 0.0
+	# Task 9: dying while the boss camera is active must reset it.
+	game.boss_cam.set("priority", 40)
 	game.player.apply_boss_damage()
 	_check(game._game_over, "player death sets game over")
+	_check(game.boss_cam.get("priority") == 0, "boss cam reset to player cam on death during boss fight")
 	_check(Engine.time_scale == 0.0, "hit-stop freezes time on player death")
 	await get_tree().create_timer(0.6).timeout  # freeze is 0.28s real, then recovers
 	_check(Engine.time_scale == 1.0, "hit-stop restores time_scale")
@@ -84,6 +87,15 @@ func _ready() -> void:
 	# --- Menu unpauses and switches cleanly ---
 	game._set_paused(false)
 	_check(not get_tree().paused, "menu path unpauses")
+
+	# --- Task 8: a hitstop overlapping a pause still restores time_scale ---
+	# Fx runs with PROCESS_MODE_ALWAYS, so its restore fires even while paused;
+	# without that guard time_scale would stay 0 and freeze the game forever.
+	Fx.hitstop(0.25)
+	get_tree().paused = true
+	await get_tree().create_timer(0.6).timeout
+	_check(Engine.time_scale == 1.0, "time_scale restored even while the tree is paused (hitstop + pause)")
+	get_tree().paused = false
 
 	UserFilesHelper.restore(_backup)
 	_summary()

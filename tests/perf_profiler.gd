@@ -151,6 +151,7 @@ func _drive_sim(delta: float) -> void:
 			_last_sampled_wave = sampled
 			var snap := _snapshot("wave %d" % sampled)
 			snap["coins"] = get_tree().get_nodes_in_group("coins").size()
+			snap["powerups"] = get_tree().get_nodes_in_group("powerups").size()
 			_wave_samples.append(snap)
 			if sampled >= _sim_target:
 				_finish()
@@ -225,9 +226,12 @@ func _fx_churn() -> void:
 	await get_tree().process_frame
 	var after := _snapshot("fx after cleanup")
 	var orphan_delta: int = after["orphans"] - before["orphans"]
-	_report("Fx nodes return to baseline after cleanup",
-		after["nodes"] - before["nodes"] <= 4,
-		"nodes %d -> %d (delta %d)" % [before["nodes"], after["nodes"], after["nodes"] - before["nodes"]])
+	# Bursts/popups are POOLED (reused), so a bounded number of nodes stays
+	# alive as the pool instead of being freed. The check is that churn is
+	# bounded by the pool caps (64 particles + 32 popups), not unbounded growth.
+	_report("Fx pooled nodes stay bounded after cleanup",
+		after["nodes"] - before["nodes"] <= 96,
+		"nodes %d -> %d (delta %d, pool cap 64+32)" % [before["nodes"], after["nodes"], after["nodes"] - before["nodes"]])
 	_report("Fx leaves no orphan nodes", orphan_delta <= 2, "orphans %d -> %d" % [before["orphans"], after["orphans"]])
 
 func _sfx_churn() -> void:
@@ -251,8 +255,20 @@ func _sfx_churn() -> void:
 
 func _finish() -> void:
 	_sim_active = false
+	# Task 6: uncollected magnet/shield powerups used to survive every wave and
+	# pile up for the whole run. They are now cleared at each wave boundary, so
+	# the per-wave count must stay small instead of growing monotonically.
+	var pu_counts: Array[int] = []
+	var pu_max := 0
+	for s in _wave_samples:
+		var c: int = int(s.get("powerups", 0))
+		pu_counts.append(c)
+		pu_max = maxi(pu_max, c)
+	if not pu_counts.is_empty():
+		_report("powerups do not accumulate across waves", pu_max <= 8,
+			"per-wave powerups max=%d series=%s" % [pu_max, str(pu_counts)])
 	print("===== PROFILER SUMMARY: failures=%d =====" % _failures)
 	for s in _wave_samples:
-		print("  [WAVE] %-28s nodes=%-6d orphans=%d coins=%d" % [
-			s["tag"], s["nodes"], s["orphans"], s.get("coins", -1)])
+		print("  [WAVE] %-28s nodes=%-6d orphans=%d coins=%d powerups=%d" % [
+			s["tag"], s["nodes"], s["orphans"], s.get("coins", -1), s.get("powerups", -1)])
 	get_tree().quit()

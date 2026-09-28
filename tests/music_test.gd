@@ -114,6 +114,24 @@ func test_music() -> void:
 	_check(raw is AudioStreamWAV and raw.get_length() > 0.0,
 		"runtime-rendered tier is playable audio (%.2fs)" % (raw.get_length() if raw is AudioStreamWAV else -1.0))
 
+	# --- 7) Task 1: a second play() inside FADE_TIME must not silence the track.
+	# The old code left both players stopped because the first crossfade's
+	# stop() callback targeted the player that became the new incoming track. ---
+	music.play("menu")
+	await get_tree().create_timer(0.4).timeout
+	music.play("battle")
+	await get_tree().create_timer(1.6).timeout
+	var audible: int = 0
+	var playing_stream := ""
+	for p: AudioStreamPlayer in music._players:
+		if p.playing and p.volume_db > -60.0:
+			audible += 1
+			playing_stream = p.stream.resource_path.get_file()
+	_check(audible == 1, "rapid double play() leaves exactly one audible player (got %d)" % audible)
+	_check(playing_stream == "battle_theme.wav",
+		"the surviving track after a rapid double play() is battle (got '%s')" % playing_stream)
+	_check(music._active == "battle", "rapid double play() leaves _active consistent (got '%s')" % music._active)
+
 	_finish()
 
 func _check(ok: bool, what: String) -> void:

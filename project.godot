@@ -23,6 +23,7 @@ Fx="*res://scripts/fx.gd"
 Achievements="*res://scripts/achievements.gd"
 PhantomCameraManager="*res://addons/phantom_camera/scripts/managers/phantom_camera_manager.gd"
 Music="*res://scripts/music.gd"
+Debug="*res://scripts/debug.gd"
 
 [display]
 
@@ -40,6 +41,10 @@ project/assembly_name="nono"
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/phantom_camera/plugin.cfg")
+
+[gui]
+
+theme/custom="res://assets/ui/nono_theme.tres"
 
 [physics]
 

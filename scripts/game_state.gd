@@ -22,6 +22,13 @@ var music_volume: float = 1.0
 var sfx_volume: float = 1.0
 var fullscreen: bool = false
 
+## Debounce for high-frequency settings writes (volume sliders drag ~60x/s).
+## The live value updates immediately; the disk write is coalesced to at most
+## one per window. Toggles fire once per click and save without delay.
+const SAVE_DEBOUNCE := 0.5
+var _save_queued := false
+var _save_left := 0.0
+
 const SAVE_PATH := "user://nono_save.cfg"
 const SETTINGS_PATH := "user://nono_settings.cfg"
 const BUS_MASTER := "Master"
@@ -42,6 +49,18 @@ const WASD_KEYS := {
 	"move_down": KEY_S,
 }
 
+## Developer/debug actions (see the Debug autoload). Bound to function keys so
+## they cannot collide with any gameplay binding (arrows/WASD/Space/Shift/ESC/
+## mouse). Debug only acts on these in a debug build with the tool switched on.
+const DEBUG_KEYS := {
+	"debug_toggle": KEY_F1,
+	"debug_boss": KEY_F2,
+	"debug_skip": KEY_F3,
+	"debug_clear": KEY_F4,
+	"debug_god": KEY_F5,
+	"debug_reset": KEY_F6,
+}
+
 func _ready() -> void:
 	# Window title is set at runtime so we never rename the project (that would
 	# move the user:// data folder and lose saves).
@@ -49,6 +68,26 @@ func _ready() -> void:
 	load_best()
 	load_settings()
 	_setup_input_actions()
+
+func _process(delta: float) -> void:
+	if not _save_queued:
+		return
+	_save_left -= delta
+	if _save_left <= 0.0:
+		_save_queued = false
+		save_settings()
+
+## Flush any pending debounced write so a quit never drops the last change.
+func _exit_tree() -> void:
+	if _save_queued:
+		_save_queued = false
+		save_settings()
+
+## Coalesce a settings write: the in-memory value is already current, and a
+## single save is performed once the debounce window elapses (or on exit).
+func _queue_save_settings() -> void:
+	_save_queued = true
+	_save_left = SAVE_DEBOUNCE
 
 # --- Settings --------------------------------------------------------------
 
@@ -79,7 +118,7 @@ func set_master_volume(value: float) -> void:
 		return
 	master_volume = clampf(value, 0.0, 1.0)
 	apply_audio()
-	save_settings()
+	_queue_save_settings()
 	settings_changed.emit()
 
 func set_music_volume(value: float) -> void:
@@ -87,7 +126,7 @@ func set_music_volume(value: float) -> void:
 		return
 	music_volume = clampf(value, 0.0, 1.0)
 	apply_audio()
-	save_settings()
+	_queue_save_settings()
 	settings_changed.emit()
 
 func set_sfx_volume(value: float) -> void:
@@ -95,7 +134,7 @@ func set_sfx_volume(value: float) -> void:
 		return
 	sfx_volume = clampf(value, 0.0, 1.0)
 	apply_audio()
-	save_settings()
+	_queue_save_settings()
 	settings_changed.emit()
 
 func set_fullscreen(value: bool) -> void:
@@ -209,6 +248,9 @@ func _setup_input_actions() -> void:
 	_bind_key("dash", KEY_SHIFT)
 	# Pause menu: Escape.
 	_bind_key("pause", KEY_ESCAPE)
+	# Developer toolbar: F-keys (inert unless the Debug autoload is enabled).
+	for action: String in DEBUG_KEYS:
+		_bind_key(action, DEBUG_KEYS[action])
 	_apply_wasd_binding()
 
 ## Add/remove the WASD key bindings based on the current setting.

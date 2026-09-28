@@ -23,6 +23,7 @@ var _streams: Dictionary = {}
 var _players: Array[AudioStreamPlayer] = []
 var _current_idx := -1   # index of the audible player, -1 = nothing playing
 var _active := ""        # key of the track currently fading in / playing
+var _fade_tween: Tween   # in-flight crossfade, killed by the next play()/stop()
 
 func _ready() -> void:
 	for key: String in TRACKS:
@@ -60,20 +61,30 @@ func play(key: String, fade := FADE_TIME) -> void:
 	var stream: AudioStream = _streams.get(key)
 	if stream == null or key == _active:
 		return
+	# Kill any in-flight crossfade first. A stale tween's stop() callback would
+	# otherwise silence the track we are about to fade in, because a second
+	# play() within FADE_TIME swaps the two players' roles.
+	if _fade_tween != null and _fade_tween.is_valid():
+		_fade_tween.kill()
+	_fade_tween = null
 	var incoming_idx := 0 if _current_idx != 0 else 1
 	var outgoing_idx := 1 - incoming_idx
 	_active = key
 	_current_idx = incoming_idx
 	var incoming: AudioStreamPlayer = _players[incoming_idx]
+	# Capture the outgoing player in a local so the callback below can never
+	# observe an index that a later play() has mutated.
 	var outgoing: AudioStreamPlayer = _players[outgoing_idx]
 	incoming.stream = stream
 	incoming.volume_db = -80.0
 	incoming.play()
-	var tw := create_tween().set_parallel(true)
-	tw.tween_property(incoming, "volume_db", 0.0, fade)
-	tw.tween_property(outgoing, "volume_db", -80.0, fade)
-	tw.chain().tween_callback(func() -> void:
-		outgoing.stop())
+	_fade_tween = create_tween().set_parallel(true)
+	_fade_tween.tween_property(incoming, "volume_db", 0.0, fade)
+	_fade_tween.tween_property(outgoing, "volume_db", -80.0, fade)
+	_fade_tween.chain().tween_callback(func() -> void:
+		# Belt-and-braces: only stop it if it is not the active track now.
+		if outgoing != _players[_current_idx]:
+			outgoing.stop())
 
 ## Crossfade to the battle track for `tier` (1..10). Tier 1 is the classic
 ## battle theme; higher tiers are procedural intensifications that resolve via
@@ -94,6 +105,9 @@ func play_battle_tier(tier: int, fade := FADE_TIME) -> void:
 
 ## Fade everything out (e.g. before quitting or on a hard mute).
 func stop(fade := FADE_TIME) -> void:
+	if _fade_tween != null and _fade_tween.is_valid():
+		_fade_tween.kill()
+	_fade_tween = null
 	for p: AudioStreamPlayer in _players:
 		var tw := create_tween()
 		tw.tween_property(p, "volume_db", -80.0, fade)

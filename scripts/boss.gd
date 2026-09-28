@@ -46,6 +46,7 @@ func _physics_process(delta: float) -> void:
 		_flash -= delta
 	_update_visuals()
 	_tick_dash_damage(delta)
+	_tick_contact_damage()
 	if _player == null or not is_instance_valid(_player):
 		velocity = Vector2.ZERO
 		move_and_slide()
@@ -143,13 +144,25 @@ func _tick_dash_damage(delta: float) -> void:
 		Fx.hitstop(0.08)
 		Fx.shake(5.0, 0.18)
 
+## Contact damage: proximity every frame, not just the one-shot area_entered.
+## Area2D fires only on enter, so a player who enters while dashing/invulnerable
+## (or simply stands inside the boss) would otherwise take no damage for the
+## whole overlap. apply_boss_damage re-checks i-frames/shield internally.
+func _tick_contact_damage() -> void:
+	if _player == null or not is_instance_valid(_player):
+		return
+	if global_position.distance_to(_player.global_position) < 48.0 \
+			and not _player.is_invulnerable():
+		_player.apply_boss_damage()
+
 func take_damage(amount: int, source_id: int) -> void:
 	if _dead:
 		return
 	_damage_sources[source_id] = int(_damage_sources.get(source_id, 0)) + amount
 	hp -= amount
 	_flash = 0.16
-	health_changed.emit(hp, max_hp)
+	# Clamp so listeners never briefly see a negative HP on the killing blow.
+	health_changed.emit(maxi(hp, 0), max_hp)
 	if hp <= 0:
 		die(true)
 

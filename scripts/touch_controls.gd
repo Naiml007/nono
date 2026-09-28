@@ -50,6 +50,9 @@ var _inset_bottom := 0.0
 
 func _ready() -> void:
 	layer = 5
+	# Single source of truth: the drawn radius must match the input math.
+	joystick.radius = JOYSTICK_RADIUS
+	joystick.knob_radius = KNOB_RADIUS
 	dash_button.button_down.connect(_on_dash_down)
 	pause_button.button_down.connect(_on_pause_down)
 	get_viewport().size_changed.connect(_apply_safe_area)

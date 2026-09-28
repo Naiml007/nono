@@ -39,7 +39,7 @@ func _ready() -> void:
 		for child in card.get_children():
 			if child is VBoxContainer:
 				for sub in child.get_children():
-					if sub is Label and ("STACK" in str(sub.text) or "ONCE PER RUN" in str(sub.text)):
+					if sub is Label and ("STACK" in str(sub.text) or "ONCE PER RUN" in str(sub.text) or "REPEATABLE" in str(sub.text)):
 						has_chip = true
 		if not has_chip:
 			all_chipped = false
@@ -62,7 +62,12 @@ func _ready() -> void:
 	if chosen_id == "speed":
 		_check(is_equal_approx(game.player.speed_mult, expected),
 			"speed buff applied once (%.2f -> %.2f)" % [before, game.player.speed_mult])
-	_check(int(game._stack_counts.get(chosen_id, 0)) == 1, "buff registered as stack count 1")
+	if game.BUFFS[chosen_id].has("one_off"):
+		_check(game._taken_one_offs.has(chosen_id), "one-off buff registered as taken")
+	elif game.BUFFS[chosen_id].get("repeat", false):
+		_check(int(game._repeat_counts.get(chosen_id, 0)) == 1, "repeatable buff counted once")
+	else:
+		_check(int(game._stack_counts.get(chosen_id, 0)) == 1, "buff registered as stack count 1")
 
 	# Choosing again when already unpaused must be ignored.
 	game._on_upgrade_chosen(chosen_id)
@@ -73,6 +78,27 @@ func _ready() -> void:
 	game._on_upgrade_choice_index(99)
 	await get_tree().process_frame
 	_check(not get_tree().paused, "out-of-range choice index ignored")
+
+	# --- Task 2: the wave-clear pool never empties over a full 50-wave run ---
+	# Simulate applying every pick for waves 1..49 (3 cards each, 147 picks) and
+	# assert a fresh offer is always available. The repeatable entries guarantee
+	# this even after every finite stack and one-off is spent.
+	game._taken_one_offs.clear()
+	game._stack_counts.clear()
+	game._repeat_counts.clear()
+	var min_offered := 99
+	var emptied_at := -1
+	for wave in range(1, 50):
+		var offer: Array[String] = game._pick_upgrade_choices()
+		min_offered = mini(min_offered, offer.size())
+		if offer.is_empty() and emptied_at < 0:
+			emptied_at = wave
+		for id: String in offer:
+			game._apply_buff(id)
+	_check(emptied_at < 0,
+		"upgrade pool never empties over 50 waves (first empty at wave %d)" % emptied_at)
+	_check(min_offered >= 3,
+		"every wave still offers 3 cards after 49 waves of picks (min %d)" % min_offered)
 
 	_summary()
 	get_tree().quit()

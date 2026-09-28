@@ -99,6 +99,24 @@ func _ready() -> void:
 	_check(Achievements.unlocked_count() == 0, "reset_progress wipes achievements")
 	_check(GameState.wasd_controls == false, "reset_progress keeps settings intact")
 
+	# --- Task 7: volume changes are debounced (no disk write per slider frame) ---
+	_remove(SETTINGS_PATH)
+	GameState.master_volume = 0.10
+	GameState.save_settings()
+	for i in 60:  # simulate a slider drag firing ~60 value_changed events
+		GameState.set_master_volume(0.2 + float(i) * 0.001)
+	_check(GameState._save_queued, "volume change queues a debounced save")
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_PATH)
+	_check(absf(float(cfg.get_value("audio", "master", -1.0)) - 0.10) < 0.001,
+		"disk is not written on every slider frame (still the old value)")
+	GameState._process(0.6)  # advance the debounce window
+	_check(not GameState._save_queued, "debounce window elapsing flushes and clears the flag")
+	cfg = ConfigFile.new()
+	cfg.load(SETTINGS_PATH)
+	_check(absf(float(cfg.get_value("audio", "master", -1.0)) - 0.259) < 0.01,
+		"debounced write persisted the final slider value")
+
 	UserFilesHelper.restore(_backup)
 	_summary()
 	get_tree().quit()

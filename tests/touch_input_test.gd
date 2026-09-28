@@ -85,6 +85,23 @@ func _ready() -> void:
 	await get_tree().process_frame
 	_check(_player.is_dashing, "DASH button (dash_pressed signal) triggers the dash")
 
+	# --- Task 5: the upgrade panel disables / hides the touch controls ---
+	# (touch mode is ON here, so visibility tracks `enabled` exactly)
+	_game._offer_upgrades()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(_game.upgrade_panel.visible, "upgrade panel open for touch test")
+	_check(not _tc.enabled, "touch controls disabled while the upgrade panel is open")
+	_check(not _tc.dash_button.visible, "dash button hidden while the upgrade panel is open")
+	_reset_dash(_player)
+	_tc._on_dash_down()  # goes through the enabled guard
+	await get_tree().process_frame
+	_check(not _player.is_dashing, "dash is ignored while the upgrade panel is open")
+	_game._on_upgrade_choice_index(0)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(_tc.enabled, "touch controls re-enabled after the upgrade choice")
+
 	# --- Auto-hide on keyboard ---
 	_send_key(KEY_A)
 	await get_tree().process_frame
