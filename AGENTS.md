@@ -65,7 +65,9 @@ res://
 │   ├── audio/sfx/         One-shot wav effects (coin, dash, explode, ...)
 │   ├── audio/music/       4 chiptune wav loops (menu, battle, boss, gameover)
 │   ├── sprites/           Hand-placed sprites (player, coin)
-│   └── fonts/ textures/ tilesets/   Mostly empty / unused
+│   ├── fonts/             Chakra Petch (OFL) - UI font family
+│   ├── ui/                THE design system: nono_theme.tres + icons + README
+│   └── textures/ tilesets/   Mostly empty / unused
 ├── shaders/               menu_bg.gdshader (procedural starfield backdrop)
 ├── tests/                 Headless verification scripts + scenes
 ├── tools/                 chiptune_generator.gd (music synth)
@@ -314,6 +316,28 @@ the scene headlessly. CI (`.github/workflows/build.yml`) loops over
 - Magic numbers that matter live at the top of the file as `const` (ARENA,
   COMBO_WINDOW, BOSS_WAVE, BUFFS).
 - Scene↔script pairing: `scenes/player.tscn` → `scripts/player.gd`.
+
+## UI design system (do not bypass)
+
+All Control styling comes from ONE theme: `assets/ui/nono_theme.tres`, applied
+project-wide via `gui/theme/custom` in `project.godot`. See
+`assets/ui/README.md` for the full token/scale reference.
+
+- **Never add `theme_override_font_size`, `theme_override_colors` or
+  `theme_override_styles` to a node** — add or reuse a `theme_type_variation`
+  instead (`Display`, `Title`, `Heading`, `Body`, `Small`, `Readout`, `Gold`,
+  `ChipStack/Once/Repeat`, `Section`, `Badge`, `BossTitle`, `Ach*`, `Toast*`,
+  `FloatPopup`, `PopupSmall`, `DebugInfo`, `FloatPanel`, `DebugPanel`; buttons:
+  `Primary`, `Ghost`, `Danger`, `Hud`, `Touch`, `Card`).
+- **Exactly 6 font sizes exist** (16/18/24/28/32/48). Never introduce a 7th;
+  new text picks an existing scale step. Same for styleboxes built in code
+  (`StyleBoxFlat.new`) — prefer a theme variation over a literal.
+- One corner radius (6), one border width (1, 2 for emphasis). **Zero
+  `shadow_offset_*`** anywhere. Text over the backdrop = outline only; text on a
+  panel = no outline. Locked/dimmed UI dims with `modulate`, not per-label
+  colours, so colour tokens stay in the theme.
+- The `*Hud` label variants carry the single outline for text drawn over the
+  starfield; use them for anything on the gameplay backdrop.
 
 ## Git & GitHub
 
