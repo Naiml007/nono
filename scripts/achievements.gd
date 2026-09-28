@@ -33,6 +33,14 @@ const ACHIEVEMENTS := {
 }
 
 var _unlocked: Dictionary = {}
+## Resting Y offsets of the toasts currently on screen. Two achievements can
+## unlock seconds apart (e.g. "Untouchable" on a wave clear, then "Marathoner"
+## when the next wave starts), and every toast used to animate to the exact
+## same y=24 on the same layer, so the second one landed on top of the first
+## and both became unreadable. Each toast claims the next free slot instead.
+const TOAST_TOP := 24.0
+const TOAST_GAP := 12.0
+var _toast_slots: Array[float] = []
 
 func _ready() -> void:
 	load_unlocked()
@@ -123,10 +131,26 @@ func _show_toast(id: String) -> void:
 	var vp := get_viewport().get_visible_rect().size
 	panel.position = Vector2((vp.x - panel.size.x) * 0.5, -panel.size.y - 8.0)
 	Sfx.play("powerup")
+	var rest_y := _claim_toast_slot(panel.size.y)
 	var tw := panel.create_tween()
 	tw.set_parallel(true)
 	tw.tween_property(panel, "modulate:a", 1.0, 0.25)
-	tw.tween_property(panel, "position:y", 24.0, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(panel, "position:y", rest_y, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.chain().tween_interval(4.0)
 	tw.tween_property(panel, "modulate:a", 0.0, 0.6)
-	tw.tween_callback(layer.queue_free)
+	tw.tween_callback(func() -> void:
+		_release_toast_slot(rest_y)
+		layer.queue_free())
+
+## Reserve the next free vertical slot so simultaneous toasts stack instead of
+## overlapping. [param height] is the toast's own height, so the next slot clears
+## it. Returns the Y the toast should rest at.
+func _claim_toast_slot(height: float) -> float:
+	var y := TOAST_TOP
+	for used in _toast_slots:
+		y = maxf(y, used + height + TOAST_GAP)
+	_toast_slots.append(y)
+	return y
+
+func _release_toast_slot(y: float) -> void:
+	_toast_slots.erase(y)

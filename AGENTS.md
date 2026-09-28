@@ -165,10 +165,20 @@ actions via `Input.action_press/release` (re-asserted every frame), so
 - DASH emits `dash_pressed` -> `game.gd` -> `player.try_dash()` (the single
   dash implementation). PAUSE emits `pause_requested` -> `game.gd`
   `_on_touch_pause_requested()` -> the same pause overlay as ESC.
-- Godot synthesizes mouse events from touches; while touch mode is ON any
-  emulated click not on a button is swallowed (`set_input_as_handled`) so a
-  stray touch never also fires the mouse-click dash. A genuine desktop mouse
-  is never swallowed, so click-dash keeps working.
+- Godot synthesizes mouse events from touches; while touch mode is ON an
+  emulated click is swallowed (`set_input_as_handled`) **only** when it lands in
+  the joystick zone and not on a touch button, so a stray touch never also fires
+  the mouse-click dash. The zone gate matters: `_input` runs before GUI dispatch,
+  so swallowing every emulated click would also kill the real HUD buttons (the
+  top-right MENU button was dead on phones).
+- `TouchControls` is `PROCESS_MODE_ALWAYS` and releases every `move_*` action it
+  pressed in `_exit_tree()` (and scrubs them on ready). The joystick drives the
+  **global** `Input` singleton via `Input.action_press`, and that state outlives
+  `reload_current_scene()` — without the release a run that ended mid-drag made
+  the next run drift sideways from frame one.
+- `PAUSE` sits bottom-left mirroring `DASH` bottom-right. It is deliberately NOT
+  top-left: this CanvasLayer draws above the HUD, and the top-left strip belongs
+  to the hearts readout.
 - Buttons are 97px (`BUTTON_SIZE`, ≥ the 88px touch target), laid out from
   `DisplayServer.get_display_safe_area()` so they clear notches/home bars.
   `game.gd` calls `set_controls_enabled(false)` while paused / game over so
@@ -265,10 +275,12 @@ Headless test scripts live in `tests/` (each with a tiny `.tscn`):
 | Test | Verifies |
 | --- | --- |
 | `boss_flow_test.gd` | Boss spawn/HP/dash-damage/bar/cam, solo achievement, heart + magnet/shield despawn between waves, standing inside the boss keeps damaging, pooled FX + polyphonic SFX, `health_changed` never negative |
+| `audit_fix_test.gd` | i-frames award no kill/score (drone is still cleared) but a dash-through still scores; boss bolts pass through an invulnerable player yet are consumed when they land or the shield eats them; two achievement toasts claim different slots; the world freezes behind the game-over panel |
 | `camera_test.gd` | Player cam active by default; boss cam priority → zoom 1.2; back to 1.0; visible world rect stays inside the arena for a matrix of viewport sizes on both cams |
 | `coin_pos_test.gd` | All spawned coins land inside the 1280×720 arena |
 | `debug_mode_test.gd` | Debug toolbar: no-op while disabled, overlay toggles, god mode, one-key boss jump (wave 50 + boss spawned + cam priority 40 + health bar) |
 | `music_test.gd` | 4 tracks load & loop, crossfades work, main menu boots; battle tiers load/loop and revisiting a tier never re-renders; a rapid double `play()` leaves exactly one audible player |
+| `mobile_ui_test.gd` | `TouchControls` is `PROCESS_MODE_ALWAYS`; the emulated-mouse swallow is limited to the steering zone so the HUD Menu button works on touch; freeing the node releases `move_*` and a new instance scrubs leaked presses; PAUSE/DASH never cover the HUD hearts |
 | `retry_test.gd` | Real `reload_current_scene()` from a paused + hit-stopped state leaves the new run unpaused at `time_scale == 1.0` |
 | `upgrade_panel_test.gd` | Upgrade offer: exactly 3 cards, pause/unpause, buff applied once, STACK/ONCE-PER-RUN/REPEATABLE chips, out-of-range index ignored, pool never empties over 50 waves |
 | `progress_persistence_test.gd` | Settings round-trip (volume/fullscreen), corrupted/missing file fallbacks, achievement persistence, reset_progress keeps settings, volume writes are debounced |

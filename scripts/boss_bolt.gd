@@ -30,6 +30,9 @@ func _physics_process(delta: float) -> void:
 func _on_area_entered(area: Area2D) -> void:
 	if area.is_in_group("player_hurtbox"):
 		var p := area.get_parent()
-		if p is Player:
-			p.apply_boss_damage()
-		queue_free()
+		# Only despawn when the hit actually landed (damage or shield absorb).
+		# An invulnerable player must let the bolt pass through: Area2D only
+		# reports entry once, so freeing here would let the player delete the
+		# boss's entire radial burst for free during their i-frames.
+		if p is Player and p.apply_boss_damage():
+			queue_free()

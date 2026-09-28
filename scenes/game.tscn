@@ -261,6 +261,7 @@ show_percentage = false
 [node name="GameOverPanel" type="Control" parent="GameOver" unique_id=283880953]
 unique_name_in_owner = true
 visible = false
+process_mode = 3
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0

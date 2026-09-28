@@ -812,6 +812,11 @@ func _on_player_died() -> void:
 	if not is_inside_tree():
 		return
 	game_over_panel.visible = true
+	# Freeze the world behind the panel: otherwise the surviving drones keep
+	# swarming the corpse and the boss keeps firing at a dead player for as long
+	# as the game-over screen is up. The panel itself is PROCESS_MODE_ALWAYS, so
+	# Retry / Menu stay live; _retry() and _to_menu() both unpause first.
+	get_tree().paused = true
 	final_score.text = "Score: %d" % GameState.score
 	final_best.text = "Best: %d" % GameState.best_score
 	new_best.visible = is_new_best

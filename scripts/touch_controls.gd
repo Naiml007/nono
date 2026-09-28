@@ -26,6 +26,10 @@ const DEAD_ZONE := 0.18
 ## The joystick may only anchor in the left JOYSTICK_ZONE_X fraction of the
 ## screen, so a thumb tap on the right never fights the dash button.
 const JOYSTICK_ZONE_X := 0.62
+## The four actions the virtual joystick drives on the global Input singleton.
+## Kept in one list so _release_all_move_actions() can scrub every action this
+## control is able to press, not just the ones it currently believes it holds.
+const MOVE_ACTIONS: Array[String] = ["move_left", "move_right", "move_up", "move_down"]
 
 ## Cleared by game.gd while a menu is up (pause / game over / upgrades) so the
 ## controls don't float over it.
@@ -50,6 +54,11 @@ var _inset_bottom := 0.0
 
 func _ready() -> void:
 	layer = 5
+	# The joystick drives the GLOBAL Input singleton with Input.action_press, so
+	# it must keep running while the tree is paused. With the default INHERIT
+	# mode a finger lifted during a pause produced no event at all, leaving the
+	# stick latched on (and the player gliding) for the rest of the session.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	# Single source of truth: the drawn radius must match the input math.
 	joystick.radius = JOYSTICK_RADIUS
 	joystick.knob_radius = KNOB_RADIUS
@@ -57,7 +66,29 @@ func _ready() -> void:
 	pause_button.button_down.connect(_on_pause_down)
 	get_viewport().size_changed.connect(_apply_safe_area)
 	_apply_safe_area()
+	# Drop any press leaked from a previous run before we start. Input's action
+	# state outlives reload_current_scene(), so a stick that was down when the
+	# old node was freed would otherwise drive the NEW run from frame one.
+	_clear_held()
+	_release_all_move_actions()
 	set_touch_mode(false)
+
+func _exit_tree() -> void:
+	# Freeing this node does NOT clear the presses it registered on the Input
+	# singleton, and reload_current_scene() keeps that state alive into the next
+	# run. Without this, a run that ended mid-drag starts the next one with the
+	# player auto-steering. Guarded so a manual free doesn't mask a later test.
+	if is_inside_tree():
+		_stop_joystick()
+		_release_all_move_actions()
+
+## Belt-and-braces: clear every move action this control can drive, regardless
+## of what we think we hold. Safe for keyboard players because a physically held
+## key re-asserts itself on the next input event.
+func _release_all_move_actions() -> void:
+	for action in MOVE_ACTIONS:
+		if InputMap.has_action(action):
+			Input.action_release(action)
 
 func _process(_delta: float) -> void:
 	_update_visibility()
@@ -82,13 +113,21 @@ func _input(event: InputEvent) -> void:
 		set_touch_mode(false)
 	elif _touch_mode and enabled and event is InputEventMouseButton \
 			and Input.is_emulating_mouse_from_touch():
-		# Touch-emulated click (Godot synthesizes mouse events from touches):
-		# swallow any that don't land on a button, so a stray touch on a phone
-		# never also fires the mouse-click dash. The DASH button is the only
-		# touch dash path. A genuine desktop mouse is not emulated and is never
-		# swallowed, so its click-dash keeps working.
+		# Touch-emulated click (Godot synthesizes mouse events from touches).
+		# Swallow it ONLY inside the joystick zone, i.e. where this control could
+		# have claimed the touch for steering, so a stray touch on a phone never
+		# also fires the mouse-click dash. The DASH button is the only touch dash
+		# path. A genuine desktop mouse is not emulated and is never swallowed, so
+		# its click-dash keeps working.
+		#
+		# This used to swallow EVERY emulated click that was not on a touch
+		# button. _input runs before GUI dispatch and set_input_as_handled()
+		# blocks it, so that also killed the real HUD buttons on a phone: tapping
+		# MENU did nothing at all, which reads as "I press MENU and get PAUSE
+		# instead". Gating on the zone keeps buttons outside the steering area
+		# (HUD Menu is anchored top-right) working.
 		var mb := event as InputEventMouseButton
-		if not _over_any_button(mb.position):
+		if not _over_any_button(mb.position) and _in_joystick_zone(mb.position):
 			get_viewport().set_input_as_handled()
 
 func _on_screen_touch(event: InputEventScreenTouch) -> void:
@@ -240,12 +279,15 @@ func _apply_safe_area() -> void:
 	_layout_buttons()
 
 func _layout_buttons() -> void:
-	# Dash: bottom-right corner.
+	# Dash: bottom-right corner, under the right thumb.
 	dash_button.offset_left = -BUTTON_SIZE - BUTTON_MARGIN - _inset_right
 	dash_button.offset_top = -BUTTON_SIZE - BUTTON_MARGIN - _inset_bottom
 	dash_button.offset_right = -BUTTON_MARGIN - _inset_right
 	dash_button.offset_bottom = -BUTTON_MARGIN - _inset_bottom
-	# Pause: bottom-left corner.
+	# Pause: bottom-left corner, mirroring DASH bottom-right. Deliberately kept
+	# here rather than top-left: the HUD hearts panel owns the top-left strip
+	# (and this CanvasLayer draws above it), so a top-left button would cover
+	# the first hearts.
 	pause_button.offset_left = BUTTON_MARGIN + _inset_left
 	pause_button.offset_top = -BUTTON_SIZE - BUTTON_MARGIN - _inset_bottom
 	pause_button.offset_right = BUTTON_MARGIN + _inset_left + BUTTON_SIZE

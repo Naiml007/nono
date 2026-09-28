@@ -142,6 +142,7 @@ func _check(ok: bool, what: String) -> void:
 		print("FAIL: ", what)
 
 func _finish() -> void:
-	print("MUSIC TEST ", "PASSED" if _failures == 0 else "FAILED (%d)" % _failures)
-	# Exit cleanly so repeated/CI runs don't accumulate a lingering scene tree.
+	# Same summary shape as every other tests/*_test.tscn, so AGENTS.md's
+	# documented contract (and the CI `failures=[1-9]` grep) applies here too.
+	print("==== MUSIC TEST SUMMARY: failures=%d ====" % _failures)
 	get_tree().quit()

@@ -130,7 +130,11 @@ func on_enemy_contact(enemy: Enemy) -> void:
 			apply_boss_damage()
 		return
 	if is_invulnerable():
-		enemy.die(true)
+		# Brushing a drone while invulnerable still clears it, so enemies cannot
+		# stack on a hurt player. It only *scores* when the dash is what did it:
+		# otherwise a player could farm +10 per drone by taking one hit and
+		# walking through the whole wave on the free 1.4s invulnerability.
+		enemy.die(is_dashing or debug_god)
 		return
 	if has_shield:
 		has_shield = false
@@ -154,9 +158,14 @@ func on_enemy_contact(enemy: Enemy) -> void:
 
 ## Player takes damage from the boss or its projectiles. Dash i-frames,
 ## invulnerability and the shield all block it, and it does not kill the attacker.
-func apply_boss_damage() -> void:
+##
+## Returns whether the attack was actually *resolved*: true when HP dropped or
+## the shield absorbed it, false when the player was merely invulnerable. A
+## projectile uses this to decide whether to despawn, so the boss's shots are
+## not silently eaten for free during the player's i-frame window.
+func apply_boss_damage() -> bool:
 	if _dead or is_invulnerable():
-		return
+		return false
 	if has_shield:
 		has_shield = false
 		shield_changed.emit(false)
@@ -164,7 +173,8 @@ func apply_boss_damage() -> void:
 		_hurt_flash = 0.18
 		Sfx.play("powerup")
 		Fx.shake(4.0, 0.15)
-		return
+		# The shield ate the hit, so the projectile is consumed.
+		return true
 	hp -= 1
 	health_changed.emit(hp, max_hp)
 	_invuln_left = invuln_time
@@ -173,6 +183,7 @@ func apply_boss_damage() -> void:
 	Fx.shake(10.0, 0.3)
 	if hp <= 0:
 		_die()
+	return true
 
 ## Identifier used when this player deals damage. In singleplayer this is always
 ## the same id; in future multiplayer each player gets a distinct one.
