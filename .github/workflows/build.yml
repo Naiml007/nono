@@ -152,31 +152,39 @@ jobs:
           mv /root/.config/godot ~/.config/godot
           mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono
 
-      # Import BEFORE installing the build template: --install-android-build-
-      # template loads the project (and its UID-resolved main scene), which
-      # fails on a fresh checkout until the .godot import cache exists
-      # ("Main scene's path could not be resolved from UID").
       - name: Import project (fresh clone needs the .godot cache)
         run: |
           godot --headless --path . --import --quit
-
-      # The image's editor settings already point the Android SDK / JDK /
-      # debug keystore at the right paths (installed inside the image).
-      - name: Install Android build template
-        run: |
-          godot --headless --path . --install-android-build-template --quit
 
       # See export-windows: builds/ is gitignored and must exist before export.
       - name: Prepare export directory
         run: mkdir -p builds
 
+      # The preset targets SDK 34; the image ships build-tools 33, so pull the
+      # matching platform/build-tools when sdkmanager is on PATH (best effort -
+      # falls back to whatever the image has).
+      - name: Ensure Android SDK packages
+        run: |
+          if command -v sdkmanager >/dev/null; then
+            sdkmanager "platforms;android-34" "build-tools;34.0.0" >/dev/null || true
+          else
+            echo "sdkmanager not found; using the image's bundled SDK"
+          fi
+
+      # --install-android-build-template MUST be passed to the SAME invocation
+      # as the export ("used in conjunction with --export-release/--export-debug"
+      # per the command-line docs): it installs the gradle template and then
+      # exports in that one editor session. Running it standalone (with --quit)
+      # installs nothing, which then fails the export with "Android build
+      # template not installed in the project".
+      #
       # Debug export = the same proven path used locally (AGENTS.md). It is
       # signed with the debug keystore that ships inside the image, so no
       # secrets are needed. A release-signed APK would require configuring a
       # keystore + GitHub secrets (see repo docs) and --export-release.
       - name: Export Android (debug, signed with debug keystore)
         run: |
-          godot --headless --path . --export-debug "Android" builds/nono.apk
+          godot --headless --path . --install-android-build-template --export-debug "Android" builds/nono.apk
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
