@@ -99,10 +99,10 @@ func popup(at: Vector2, text: String, color: Color, size: int = 22) -> void:
 		return
 	var label := _acquire_popup()
 	label.text = text
-	label.add_theme_font_size_override("font_size", size)
+	# Font sizing comes from the theme (FloatPopup / PopupSmall), never a
+	# literal here — `size` only selects which step of the type scale to use.
+	label.theme_type_variation = &"FloatPopup" if size >= 28 else &"PopupSmall"
 	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
-	label.add_theme_constant_override("outline_size", 6)
 	label.modulate = Color(1, 1, 1, 1)
 	label.z_index = 100
 	# A Label parented straight to a Node2D is not laid out until the next

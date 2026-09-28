@@ -96,37 +96,25 @@ func _show_toast(id: String) -> void:
 	layer.layer = 200
 	get_tree().root.add_child(layer)
 	var panel := PanelContainer.new()
+	panel.theme_type_variation = &"FloatPanel"
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
 	panel.add_child(box)
 	var title := Label.new()
 	title.text = "ACHIEVEMENT UNLOCKED"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 20)
-	title.add_theme_color_override("font_color", Color(1.0, 0.82, 0.3))
+	title.theme_type_variation = &"ToastTitle"
 	box.add_child(title)
 	var name_label := Label.new()
 	name_label.text = str(meta.get("name", id))
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 30)
-	name_label.add_theme_color_override("font_color", Color.WHITE)
+	name_label.theme_type_variation = &"ToastName"
 	box.add_child(name_label)
 	var desc_label := Label.new()
 	desc_label.text = str(meta.get("desc", ""))
 	desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	desc_label.add_theme_font_size_override("font_size", 14)
-	desc_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.9))
+	desc_label.theme_type_variation = &"ToastDesc"
 	box.add_child(desc_label)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.07, 0.08, 0.12, 0.96)
-	style.border_color = Color(1.0, 0.8, 0.25, 1.0)
-	style.set_border_width_all(3)
-	style.set_corner_radius_all(12)
-	style.content_margin_left = 44.0
-	style.content_margin_right = 44.0
-	style.content_margin_top = 16.0
-	style.content_margin_bottom = 16.0
-	panel.add_theme_stylebox_override("panel", style)
 	layer.add_child(panel)
 	panel.modulate.a = 0.0
 	panel.reset_size()

@@ -145,16 +145,9 @@ func _build_overlay() -> void:
 	_panel.offset_left = -OVERLAY_WIDTH
 	_panel.offset_right = -8.0
 	_panel.offset_top = 8.0
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.02, 0.04, 0.07, 0.72)
-	style.border_color = Color(0.35, 0.85, 1.0, 0.5)
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(8)
-	style.set_content_margin_all(8.0)
-	_panel.add_theme_stylebox_override("panel", style)
+	_panel.theme_type_variation = &"DebugPanel"
 	_label = Label.new()
-	_label.add_theme_font_size_override("font_size", 13)
-	_label.add_theme_color_override("font_color", Color(0.75, 1.0, 0.85))
+	_label.theme_type_variation = &"DebugInfo"
 	_panel.add_child(_label)
 	add_child(_panel)
 
