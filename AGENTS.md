@@ -83,14 +83,28 @@ under `addons/` unless fixing a bug (see "Known issues" below).
 | Singleton | Script | Purpose |
 | --- | --- | --- |
 | `GameState` | `scripts/game_state.gd` | Run score/kills/wave, best-score persistence, WASD/mouse-dash settings, **defines all input actions at runtime** |
-| `Sfx` | `scripts/sfx.gd` | One-shot SFX; coins use a shared polyphonic player |
+| `Sfx` | `scripts/sfx.gd` | One-shot SFX; the five frequent sounds share a polyphonic player |
 | `Fx` | `scripts/fx.gd` | "Juice": particle bursts, floating popups, camera shake. `Fx.setup(world, camera)` is called by `game.gd` |
 | `Achievements` | `scripts/achievements.gd` | Unlock tracking + toast banner. Currently `let_me_solo_her` |
 | `PhantomCameraManager` | `addons/.../phantom_camera_manager.gd` | Engine-level camera manager singleton |
 | `Music` | `scripts/music.gd` | Crossfading BGM loop player; tracks preloaded and looped |
+| `Debug` | `scripts/debug.gd` | Developer toolbar: F1 overlay, F2 boss jump, F3 skip wave, F4 kill enemies, F5 god mode, F6 reset run. **Inert unless `OS.is_debug_build()` AND F1 is toggled on** |
 
 These singletons are referenced by bare name (`GameState.add_score(...)`,
 `Sfx.play("coin")`) — no `class_name` is needed/used for autoloads.
+
+### Debug toolbar (developer only)
+
+`Debug` is the only autoload that is allowed to no-op: every entry point checks
+`available` (`OS.is_debug_build()`, false in a release export) **and** `active`
+(the F1 toggle, default off). `game.gd` calls `Debug.register(self)` in
+`_ready` / `Debug.unregister(self)` in `_exit_tree`; nothing else in the game
+reaches into `Debug`, so wave jumps go through `Game.debug_*` methods. The
+overlay draws the camera's visible world rect next to the arena rect, which
+makes "the player left the map" visible while testing. Keys are F1-F6 — see
+`DEBUG_KEYS` in `game_state.gd` (registered at runtime, never in
+`project.godot`). God mode is `Player.debug_god`, checked inside
+`is_invulnerable()` and `_can_dash()`, so it is off in every normal run.
 
 ### Input actions — defined in code, not the editor
 
@@ -153,10 +167,11 @@ actions via `Input.action_press/release` (re-asserted every frame), so
   emulated click not on a button is swallowed (`set_input_as_handled`) so a
   stray touch never also fires the mouse-click dash. A genuine desktop mouse
   is never swallowed, so click-dash keeps working.
-- Buttons are 92px (≥ the 88px touch target), laid out from
+- Buttons are 97px (`BUTTON_SIZE`, ≥ the 88px touch target), laid out from
   `DisplayServer.get_display_safe_area()` so they clear notches/home bars.
   `game.gd` calls `set_controls_enabled(false)` while paused / game over so
-  the controls never float over a menu.
+  the controls never float over a menu (and while the upgrade panel is open, so
+  a tap can't fire a phantom dash on a paused tree).
 - The setting `GameState.touch_controls` (default on) persists to
   `user://nono_settings.cfg` and has a toggle in the main-menu settings panel.
 
@@ -168,30 +183,47 @@ actions via `Input.action_press/release` (re-asserted every frame), so
 
 ### Upgrades (wave-clear buffs)
 
-`BUFFS` dictionary in `game.gd` with `"stack"` (max picks per run) or `"one_off"`
-(once per run) keys: speed, dash, magnet, shield, heal, maxhp, combo, value, shock.
-Choices are picked from the remaining pool, shuffled, 3 shown as code-built
-Button cards in the upgrade panel (1/2/3 hotkeys). `_apply_buff` mutates the
-player or run state directly.
+`BUFFS` dictionary in `game.gd` with `"stack"` (max picks per run), `"one_off"`
+(once per run) or `"repeat"` (never exhausted) keys: speed, dash, magnet, shield,
+heal, maxhp, combo, value, shock, overcharge, repair, reserve. Choices are picked
+from the remaining pool, shuffled, 3 shown as code-built Button cards in the
+upgrade panel (1/2/3 hotkeys). `_apply_buff` mutates the player or run state
+directly. The three `repeat` entries guarantee the pool can never empty over a
+50-wave run, so the panel is never skipped.
 
 ### Camera (Phantom Camera addon)
 
 - `Camera2D` (named `Camera`) has a child `PhantomCameraHost`.
 - Two `PhantomCamera2D` nodes: `PlayerCam` (priority 10, glued to Player) and `BossCam` (priority 0, glued, zoom 1.2, damping 0.12).
-- `game.gd` flips boss cam priority 0↔40 to switch active camera on boss spawn/death.
-- Camera limits are the full 1280×720 arena, so follow position clamps to screen center — the *observable* behavior is the priority zoom switch, not position tracking (see `tests/camera_test.gd`).
+- `game.gd` flips boss cam priority 0↔40 to switch active camera on boss spawn/death
+  (and resets it on player death, so the game-over screen never renders zoomed).
+- **Camera bounds** (the visible world rect is `viewport / zoom`, so on a
+  viewport *larger* than the arena — stretch aspect `expand` on any non-16:9
+  window or landscape phone — camera limits alone cannot contain the view):
+  `Game._apply_camera_bounds()` derives a **minimum zoom** from the arena, sets
+  it on both `PhantomCamera2D`s (`boss_cam` gets `BOSS_ZOOM *` it), and pins
+  the host `Camera2D` limits to `Rect2(0,0,1280,720)`. It re-runs on every
+  `size_changed` and whenever the addon forwards its own limits (it emits
+  unlimited defaults). `Game._enforce_camera_floor()` runs every frame at
+  `process_priority = 400` (after the `PhantomCameraHost` at 300) so a mid-tween
+  zoom cannot dip below the floor. `tests/camera_test.gd` asserts the invariant
+  for a matrix of viewport sizes on both cameras.
 - Manager is an autoload (`PhantomCameraManager`) AND registers itself as an engine singleton named `PhantomCameraManager`.
 
 ### Audio
 
 - `Sfx`: loads wavs from `assets/audio/sfx/`; `play(name, pitch=1, vol=0)`.
-  Coin uses an `AudioStreamPolyphonic` shared player (12 voices) so rapid
-  pickups don't spawn nodes; everything else spawns a short-lived player on
-  the `Sfx` bus (`finished → queue_free`).
+  The five frequent sounds (`coin` 12, `explode` 8, `powerup` 6, `dash` 4,
+  `hurt` 4 voices — see `POLYPHONY`) each use a shared
+  `AudioStreamPolyphonic` player, so rapid overlaps never spawn nodes. The rare
+  ones (`wave`, `gameover`) still spawn a short-lived player on the `Sfx` bus
+  (`finished → queue_free`).
 - `Music`: crossfades between 2 `AudioStreamPlayer`s (`Music` bus). Tracks
   preloaded as `AudioStreamWAV` with `LOOP_FORWARD` set in code. `play()` is
-  a no-op if the track is already active — retry/restart never cuts music.
-  Keys: `menu`, `battle`, `boss`, `gameover`.
+  a no-op if the track is already active — retry/restart never cuts music —
+  and it kills any in-flight crossfade tween first, so a `play()` inside
+  `FADE_TIME` can never silence the track that just faded in. Keys: `menu`,
+  `battle`, `boss`, `gameover`.
 - **Battle intensity tiers**: battle music intensifies every 5 waves instead of
   looping one static track. `game.gd` maps wave → tier (`_battle_tier_for_wave`,
   tiers 1-10, wave 50 = boss) and calls `Music.play_battle_tier(tier)` on tier
@@ -209,12 +241,17 @@ player or run state directly.
 ...)` → tweened floating Label; `Fx.shake(amount, dur)` → camera offset jitter.
 Requires `Fx.setup(world, camera)` once per scene (done by `game.gd`).
 
+Bursts and popups are **pooled** (capped at 64 particles / 32 popups): a parked
+node stays a child of the world but is inert, so effects never churn the
+SceneTree during play. `Fx` is `PROCESS_MODE_ALWAYS` so a hit-stop that
+overlaps a pause still restores `Engine.time_scale`.
+
 ## Persistence (user://)
 
 | File | What | Written by |
 | --- | --- | --- |
 | `user://nono_save.cfg` | Best score (`meta/best`) | `GameState` on death |
-| `user://nono_settings.cfg` | `wasd`, `mouse_dash`, `touch`, master/music/sfx volume, fullscreen | `GameState` on change |
+| `user://nono_settings.cfg` | `wasd`, `mouse_dash`, `touch`, master/music/sfx volume, fullscreen | `GameState` on change (volume writes are debounced 0.5s, flushed on exit) |
 | `user://nono_achievements.cfg` | Unlocked id list | `Achievements` |
 
 All are simple `ConfigFile`s.
@@ -225,19 +262,31 @@ Headless test scripts live in `tests/` (each with a tiny `.tscn`):
 
 | Test | Verifies |
 | --- | --- |
-| `boss_flow_test.gd` | Boss spawn/HP/dash-damage/bar/cam, solo achievement, heart despawn between waves, polyphonic coin SFX |
-| `camera_test.gd` | Player cam active by default; boss cam priority → zoom 1.2; back to 1.0 |
+| `boss_flow_test.gd` | Boss spawn/HP/dash-damage/bar/cam, solo achievement, heart + magnet/shield despawn between waves, standing inside the boss keeps damaging, pooled FX + polyphonic SFX, `health_changed` never negative |
+| `camera_test.gd` | Player cam active by default; boss cam priority → zoom 1.2; back to 1.0; visible world rect stays inside the arena for a matrix of viewport sizes on both cams |
 | `coin_pos_test.gd` | All spawned coins land inside the 1280×720 arena |
-| `music_test.gd` | 4 tracks load & loop, crossfades work, main menu boots; battle tiers load/loop and revisiting a tier never re-renders |
-| `upgrade_panel_test.gd` | Upgrade offer: exactly 3 cards, pause/unpause, buff applied once, STACK/ONCE-PER-RUN chips, out-of-range index ignored |
-| `progress_persistence_test.gd` | Settings round-trip (volume/fullscreen), corrupted/missing file fallbacks, achievement persistence, reset_progress keeps settings |
+| `debug_mode_test.gd` | Debug toolbar: no-op while disabled, overlay toggles, god mode, one-key boss jump (wave 50 + boss spawned + cam priority 40 + health bar) |
+| `music_test.gd` | 4 tracks load & loop, crossfades work, main menu boots; battle tiers load/loop and revisiting a tier never re-renders; a rapid double `play()` leaves exactly one audible player |
+| `retry_test.gd` | Real `reload_current_scene()` from a paused + hit-stopped state leaves the new run unpaused at `time_scale == 1.0` |
+| `upgrade_panel_test.gd` | Upgrade offer: exactly 3 cards, pause/unpause, buff applied once, STACK/ONCE-PER-RUN/REPEATABLE chips, out-of-range index ignored, pool never empties over 50 waves |
+| `progress_persistence_test.gd` | Settings round-trip (volume/fullscreen), corrupted/missing file fallbacks, achievement persistence, reset_progress keeps settings, volume writes are debounced |
 | `smoke_test.gd` | Wave 1→50 boss kill→game over flow, score+best labels, retry reset, menu unpause |
-| `touch_input_test.gd` | Virtual joystick drives move_* actions, DASH/PAUSE route to try_dash/pause, auto show/hide, emulated-mouse swallow, safe-area anchors, touch_controls round-trip |
+| `touch_input_test.gd` | Virtual joystick drives move_* actions, DASH/PAUSE route to try_dash/pause, auto show/hide, emulated-mouse swallow, safe-area anchors, controls disabled while the upgrade panel is open, touch_controls round-trip |
+
+`tests/full_run_bot.gd` is a throwaway `SceneTree` bot (not a `*_test.tscn`, so
+CI skips it): it plays wave 1 → the wave-50 boss on the real game logic at
+`time_scale 5` and logs every wave, used to sanity-check a full run.
 
 Run any test by running its `.tscn` (the `_ready` runs assertions, prints
 `PASS/FAIL`, and calls `get_tree().quit()`). They instantiate `game.tscn`
 directly, so they need the autoloads present. Use `run_tests` in Ziva or run
-the scene headlessly.
+the scene headlessly. CI (`.github/workflows/build.yml`) loops over
+`tests/*_test.tscn` on every push/PR — a `FAIL:` line, a non-zero
+`failures=N` summary, a script error, or a non-zero exit fails the build.
+
+> Gotcha when grepping test output: a **passing** test still prints
+> `==== ... failures=0 ====`, so a case-insensitive `grep FAIL` matches every
+> run. Match `^FAIL:` or `failures=[1-9]` instead.
 
 ## Tools
 
@@ -272,6 +321,13 @@ the scene headlessly.
 - `.gitignore` excludes `.godot/`, `builds/`, `.ziva/`, and the large
   `zivacode/` binary. Do not commit `builds/`.
 - Commit in small logical units; push with `git push origin main`.
+- **CI**: `.github/workflows/build.yml` runs the headless suite on every
+  push/PR, exports Windows on `main`, and exports the Android debug APK on
+  tags/manual. It uses `barichello/godot-ci:mono-4.7.2` (the .NET build is
+  required even though the project is pure GDScript) and moves the image's
+  `~/.config/godot` + mono export templates into the `HOME` container jobs
+  actually run with. No secrets: the Android APK is debug-signed with the
+  keystore inside the image.
 
 ## Exporting / Android
 
