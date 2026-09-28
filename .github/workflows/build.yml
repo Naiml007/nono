@@ -2,8 +2,8 @@ name: Build & Test
 
 # When this pipeline runs:
 #   - every push / PR            -> headless test suite
-#   - pushes to main             -> + Windows export (fresh build artifact)
-#   - tag vX.Y.Z or manual run   -> + Windows + Android exports
+#   - pushes to main             -> + Windows AND Android artifacts
+#   - tag vX.Y.Z or manual run   -> + Windows + Android artifacts
 #
 # NOTE: this project uses the MONO (.NET) build of Godot 4.7.2 (pure GDScript,
 # no C# code, but the mono engine + mono export templates are required), so all
@@ -138,7 +138,7 @@ jobs:
     container:
       image: barichello/godot-ci:mono-4.7.2
     needs: test
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
