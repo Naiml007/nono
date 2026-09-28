@@ -54,12 +54,18 @@ func _ready() -> void:
 
 func _request_request_completed(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray) -> void:
 	if result != HTTPRequest.RESULT_SUCCESS: return
+	# Only a 200 OK carries the releases array; error statuses (e.g. a 403
+	# rate-limit) carry a JSON object, which must not be parsed as a release list.
+	if response_code != 200: return
 
 	if not editor_plugin: return
 	var current_version: String = editor_plugin.get_version()
 
-	# Work out the next version from the releases information on GitHub
-	var response: Array = JSON.parse_string(body.get_string_from_utf8())
+	# Work out the next version from the releases information on GitHub.
+	# JSON.parse_string() returns any Variant (a Dictionary on a GitHub error
+	# response), so keep it untyped and reject non-arrays with the guard below
+	# instead of coercing it into a typed Array (which errors on a Dictionary).
+	var response: Variant = JSON.parse_string(body.get_string_from_utf8())
 	if typeof(response) != TYPE_ARRAY: return
 
 	# GitHub releases are in order of creation, not order of version
