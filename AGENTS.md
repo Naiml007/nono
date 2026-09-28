@@ -346,12 +346,17 @@ project-wide via `gui/theme/custom` in `project.godot`. See
   `zivacode/` binary. Do not commit `builds/`.
 - Commit in small logical units; push with `git push origin main`.
 - **CI**: `.github/workflows/build.yml` runs the headless suite on every
-  push/PR, exports Windows on `main`, and exports the Android debug APK on
-  tags/manual. It uses `barichello/godot-ci:mono-4.7.2` (the .NET build is
-  required even though the project is pure GDScript) and moves the image's
-  `~/.config/godot` + mono export templates into the `HOME` container jobs
-  actually run with. No secrets: the Android APK is debug-signed with the
-  keystore inside the image.
+  push/PR, and on `main` (plus `v*` tags and manual runs) also exports the
+  Windows build and the Android debug APK. It uses
+  `barichello/godot-ci:mono-4.7.2` (the .NET build is required even though the
+  project is pure GDScript) and moves the image's `~/.config/godot` + mono
+  export templates into the `HOME` container jobs actually run with. No
+  secrets: the Android APK is debug-signed with the keystore inside the image.
+- **CI gotcha**: `--install-android-build-template` only works when passed to
+  the **same invocation** as the export (`godot --headless --path .
+  --install-android-build-template --export-debug "Android" …`). Running it as
+  its own step installs nothing, and the export then fails with "Android build
+  template not installed in the project".
 
 ## Exporting / Android
 
@@ -373,9 +378,12 @@ project-wide via `gui/theme/custom` in `project.godot`. See
   `org.gradle.java.home=C:/Users/distr/AppData/Local/Programs/temurin21/jdk-21.0.12.1+1`
   in `android/build/gradle.properties` — use forward slashes there (Java
   properties treats `\` as an escape, so `\t`/`\Users` get mangled).
-- Build for phone test (headless):
-  `Godot_v4.7.2-stable_mono_win64.exe --headless --path . --export-debug "Android" builds/nono.apk`
+- Build for phone test (headless): `Godot_v4.7.2-stable_mono_win64.exe
+  --headless --path . --export-debug "Android" builds/nono.apk`
   then `adb install -r builds/nono.apk` with a phone in USB-debugging mode.
+  If `res://android/build` is missing, add `--install-android-build-template`
+  to that **same** command (it does nothing as a standalone run — see the CI
+  bullet above).
   The `~libziva_agent...dll` copy errors during headless export are benign
   (editor holds the DLL; the extension is excluded from the build anyway).
 
@@ -407,4 +415,3 @@ project-wide via `gui/theme/custom` in `project.godot`. See
    action, do it there so the WASD-toggle logic keeps working.
 6. Don't rename the project (`application/config/name`) — that moves Godot's
    `user://` folder and loses save data.
-```
