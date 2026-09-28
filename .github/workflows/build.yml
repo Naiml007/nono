@@ -152,15 +152,19 @@ jobs:
           mv /root/.config/godot ~/.config/godot
           mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono
 
+      # Import BEFORE installing the build template: --install-android-build-
+      # template loads the project (and its UID-resolved main scene), which
+      # fails on a fresh checkout until the .godot import cache exists
+      # ("Main scene's path could not be resolved from UID").
+      - name: Import project (fresh clone needs the .godot cache)
+        run: |
+          godot --headless --path . --import --quit
+
       # The image's editor settings already point the Android SDK / JDK /
       # debug keystore at the right paths (installed inside the image).
       - name: Install Android build template
         run: |
           godot --headless --path . --install-android-build-template --quit
-
-      - name: Import project (fresh clone needs the .godot cache)
-        run: |
-          godot --headless --path . --import --quit
 
       # See export-windows: builds/ is gitignored and must exist before export.
       - name: Prepare export directory
