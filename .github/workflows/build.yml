@@ -111,6 +111,12 @@ jobs:
         run: |
           godot --headless --path . --import --quit
 
+      # builds/ is gitignored, so a fresh checkout has no such directory and
+      # Godot refuses ("Prepare Template: The given export path doesn't
+      # exist") rather than creating it. Make it first.
+      - name: Prepare export directory
+        run: mkdir -p builds
+
       # Preset uses embed_pck=false -> both nono.exe and nono.pck are produced.
       - name: Export Windows release
         run: |
@@ -155,6 +161,10 @@ jobs:
       - name: Import project (fresh clone needs the .godot cache)
         run: |
           godot --headless --path . --import --quit
+
+      # See export-windows: builds/ is gitignored and must exist before export.
+      - name: Prepare export directory
+        run: mkdir -p builds
 
       # Debug export = the same proven path used locally (AGENTS.md). It is
       # signed with the debug keystore that ships inside the image, so no
