@@ -91,10 +91,12 @@ func _pick_attack() -> void:
 		state = State.TELEGRAPH_CHARGE
 		_state_left = telegraph_time
 		_telegraph_tint = Color(1.7, 0.35, 0.3)
+		Fx.aim_line(global_position, _player.global_position, Color(1.0, 0.2, 0.15, 0.78), telegraph_time)
 	else:
 		state = State.TELEGRAPH_BURST
 		_state_left = telegraph_time + 0.25
 		_telegraph_tint = Color(1.7, 1.25, 0.3)
+		Fx.ring(global_position, Color(1.0, 0.72, 0.18, 0.75), 210.0, 3.0, _state_left)
 	sprite.scale = Vector2(1.28, 1.28)
 	_update_visuals()
 
@@ -140,8 +142,10 @@ func _tick_dash_damage(delta: float) -> void:
 		take_damage(1, _player.source_id())
 		_dash_hit_cd = 0.35
 		Fx.burst(global_position, Color(1.0, 0.6, 0.3), 10, 240, 0.35, 0.9)
-		# Weightier beat than a regular kill: small hit-stop + screen shake.
+		Fx.flash(global_position, Color(1.0, 0.55, 0.2), 0.9, 0.11)
 		Fx.hitstop(0.08)
+		Fx.slowmo(0.55, 0.2)
+		Fx.zoom_punch(0.035, 0.16)
 		Fx.shake(5.0, 0.18)
 
 ## Contact damage: proximity every frame, not just the one-shot area_entered.
@@ -173,6 +177,9 @@ func die(_scored: bool) -> void:
 	velocity = Vector2.ZERO
 	set_physics_process(false)
 	Fx.burst(global_position, Color(1.0, 0.5, 0.2), 48, 540, 1.1, 1.7)
+	Fx.debris(global_position, Color(1.0, 0.46, 0.2), 20, 420, 0.75)
+	Fx.screen_flash(Color(1.0, 0.46, 0.16), 0.26, 0.42)
+	Fx.zoom_punch(0.08, 0.38)
 	Fx.shake(14.0, 0.5)
 	Fx.hitstop(0.3)
 	Sfx.play("explode", 0.7, -2.0)

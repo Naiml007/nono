@@ -138,6 +138,10 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	Debug.unregister(self)
+	# Pooled VFX children die with the world; detach the singleton only when it
+	# still points at this scene (test harnesses may briefly host multiple games).
+	if Fx._world == self:
+		Fx.setup(null, null)
 
 func _process(delta: float) -> void:
 	# Enforce the aspect-driven zoom floor on the live host camera every frame so
@@ -279,6 +283,10 @@ func _spawn_boss() -> void:
 	if boss_cam != null:
 		boss_cam.set("priority", 40)
 	Fx.burst(b.global_position, Color(1.0, 0.5, 0.2), 40, 420, 0.8, 1.4)
+	Fx.screen_flash(Color(1.0, 0.42, 0.18), 0.10, 0.26)
+	Fx.zoom_punch(0.055, 0.24)
+	Fx.shake(7.0, 0.32)
+	Fx.ring(b.global_position, Color(1.0, 0.48, 0.2, 0.9), 120.0, 5.0, 0.42)
 
 func _on_boss_health_changed(current: int, max_hp: int) -> void:
 	if boss_bar.visible:
@@ -286,6 +294,8 @@ func _on_boss_health_changed(current: int, max_hp: int) -> void:
 		boss_health.value = current
 
 func _show_boss_ui(boss: Boss) -> void:
+	Fx.aim_line(boss.global_position, player.global_position, Color(1.0, 0.34, 0.23, 0.7), 0.5)
+	Fx.ring(boss.global_position, Color(1.0, 0.45, 0.2, 0.65), 160.0, 3.0, 0.65)
 	boss_bar.visible = true
 	boss_health.max_value = boss.max_hp
 	boss_health.value = boss.hp
@@ -310,6 +320,9 @@ func _on_boss_died(boss: Boss) -> void:
 	_maybe_drop_powerup(boss.global_position + Vector2(26, -22))
 	GameState.add_score(500)
 	Fx.popup(boss.global_position, "+500", Color(1.0, 0.7, 0.3), 30)
+	Fx.screen_flash(Color(1.0, 0.56, 0.18), 0.16, 0.32)
+	Fx.zoom_punch(0.07, 0.3)
+	Fx.vignette(false)
 	if boss.solo_attacker_id() != -1:
 		Achievements.unlock("let_me_solo_her")
 	if _alive_enemies <= 0 and not _game_over and not _pending_wave:
@@ -523,6 +536,7 @@ func _on_coin_collected(c: Coin) -> void:
 	GameState.add_score(pts)
 	_update_combo_ui()
 	Fx.burst(c.global_position, Color(1.0, 0.85, 0.25), 6, 150, 0.35, 0.7)
+	Fx.ring(c.global_position, Color(1.0, 0.82, 0.22, 0.8), 30.0, 2.0, 0.16)
 	Fx.popup(c.global_position, "+%d" % pts, Color(1.0, 0.85, 0.25), 22)
 	Sfx.play("coin", randf_range(0.92, 1.2))
 	# Combo milestone: a distinct audio/visual beat so it's felt, not just read.
@@ -530,6 +544,8 @@ func _on_coin_collected(c: Coin) -> void:
 		_max_combo_mult = maxi(_max_combo_mult, mult)
 		Fx.popup(player.global_position + Vector2(0, -48), "COMBO x%d!" % mult, Color(1.0, 0.62, 0.2), 30)
 		Fx.burst(player.global_position, Color(1.0, 0.62, 0.2), 14, 260, 0.5, 1.0)
+		Fx.ring(player.global_position, Color(1.0, 0.62, 0.2, 0.9), 72.0, 3.0, 0.24)
+		Fx.hitstop(0.035)
 		Fx.shake(3.0, 0.12)
 		Sfx.play("powerup", 1.05 + 0.08 * mult)
 		if _max_combo_mult >= 5:
@@ -569,14 +585,19 @@ func _update_combo_ui() -> void:
 func _tick_magnet(delta: float) -> void:
 	if player.magnet_left <= 0.0:
 		return
-	var radius := player.effective_magnet_radius()
-	var target := player.global_position
-	for c in _coins:
-		if not is_instance_valid(c):
+	var radius: float = player.effective_magnet_radius()
+	if radius <= 0.0:
+		return
+	var radius_squared: float = radius * radius
+	var target: Vector2 = player.global_position
+	for coin_ref: Variant in _coins:
+		if not is_instance_valid(coin_ref):
 			continue
-		var d := c.global_position.distance_to(target)
-		if d < radius and d > 1.0:
-			c.global_position = c.global_position.move_toward(target, 640.0 * delta)
+		var coin: Coin = coin_ref as Coin
+		var offset: Vector2 = target - coin.global_position
+		var distance_squared: float = offset.length_squared()
+		if distance_squared < radius_squared and distance_squared > 1.0:
+			coin.global_position = coin.global_position.move_toward(target, 640.0 * delta)
 
 # --- Power-ups -------------------------------------------------------------
 

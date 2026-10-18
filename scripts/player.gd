@@ -60,9 +60,9 @@ func _physics_process(delta: float) -> void:
 		_dash_left -= delta
 		velocity = _dash_dir * dash_speed * dash_speed_mult
 		_trail_acc += delta
-		if _trail_acc > 0.02:
+		if _trail_acc > 0.025:
 			_trail_acc = 0.0
-			Fx.burst(global_position, Color(0.4, 0.9, 1.0), 1, 50, 0.35, 0.8)
+			Fx.afterimage(sprite.texture, global_position, sprite.global_rotation, sprite.global_scale, Color(0.35, 0.85, 1.0, 0.42), 0.14)
 		if _dash_left <= 0.0:
 			is_dashing = false
 			velocity = Vector2.ZERO
@@ -106,6 +106,8 @@ func _try_dash() -> void:
 	_invuln_left = maxf(_invuln_left, dash_time + 0.05)
 	Sfx.play("dash")
 	Fx.shake(4.0, 0.15)
+	Fx.flash(global_position, Color(0.4, 0.9, 1.0), 0.7, 0.10)
+	Fx.ring(global_position, Color(0.4, 0.9, 1.0, 0.8), 42.0, 3.0, 0.18)
 	Fx.burst(global_position, Color(0.4, 0.9, 1.0), 10, 200, 0.45, 1.0)
 	if shockwave:
 		for node in get_tree().get_nodes_in_group("enemies"):
@@ -117,6 +119,8 @@ func _try_dash() -> void:
 			if b != null and is_instance_valid(b) and b.global_position.distance_to(global_position) <= 95.0:
 				b.take_damage(3, source_id())
 		Fx.burst(global_position, Color(0.5, 0.85, 1.0), 26, 340, 0.5, 1.5)
+		Fx.ring(global_position, Color(0.4, 0.85, 1.0, 0.9), 100.0, 5.0, 0.3)
+		Fx.hitstop(0.045)
 		Fx.shake(7.0, 0.22)
 
 ## Called by an enemy when its hitbox touches this player's hurtbox.
@@ -142,6 +146,8 @@ func on_enemy_contact(enemy: Enemy) -> void:
 		_invuln_left = 0.8
 		_hurt_flash = 0.18
 		Sfx.play("powerup")
+		Fx.ring(global_position, Color(0.35, 1.0, 0.78, 0.9), 48.0, 3.0, 0.2)
+		Fx.flash(global_position, Color(0.35, 1.0, 0.78), 0.65, 0.08)
 		Fx.shake(4.0, 0.15)
 		enemy.die(true)
 		return
@@ -153,7 +159,12 @@ func on_enemy_contact(enemy: Enemy) -> void:
 	took_hit.emit()
 	enemy.die(true)
 	Fx.shake(10.0, 0.3)
+	Fx.screen_flash(Color(0.95, 0.16, 0.18), 0.22, 0.18)
+	Fx.vignette(hp <= 2)
+	Fx.slowmo(0.32, 0.12)
+	Fx.ring(global_position, Color(1.0, 0.25, 0.2, 0.9), 54.0, 4.0, 0.23)
 	if hp <= 0:
+		Fx.hitstop(0.12)
 		_die()
 
 ## Player takes damage from the boss or its projectiles. Dash i-frames,
@@ -172,6 +183,8 @@ func apply_boss_damage() -> bool:
 		_invuln_left = 0.8
 		_hurt_flash = 0.18
 		Sfx.play("powerup")
+		Fx.ring(global_position, Color(0.35, 1.0, 0.78, 0.9), 48.0, 3.0, 0.2)
+		Fx.flash(global_position, Color(0.35, 1.0, 0.78), 0.65, 0.08)
 		Fx.shake(4.0, 0.15)
 		# The shield ate the hit, so the projectile is consumed.
 		return true
@@ -181,7 +194,12 @@ func apply_boss_damage() -> bool:
 	_hurt_flash = 0.22
 	took_hit.emit()
 	Fx.shake(10.0, 0.3)
+	Fx.screen_flash(Color(0.95, 0.16, 0.18), 0.22, 0.18)
+	Fx.vignette(hp <= 2)
+	Fx.slowmo(0.32, 0.12)
+	Fx.ring(global_position, Color(1.0, 0.25, 0.2, 0.9), 54.0, 4.0, 0.23)
 	if hp <= 0:
+		Fx.hitstop(0.12)
 		_die()
 	return true
 
@@ -213,6 +231,8 @@ func _tick(delta: float) -> void:
 	if _hurt_flash > 0.0:
 		var k: float = clampf(_hurt_flash / 0.2, 0.0, 1.0)
 		base = base.lerp(Color(2.0, 0.35, 0.35), k)
+	if hp > 2 and Fx._vignette_rect != null:
+		Fx.vignette(false)
 	if _invuln_left > 0.0 and int(_flash * 14.0) % 2 == 0:
 		base.a = 0.35
 	sprite.modulate = base

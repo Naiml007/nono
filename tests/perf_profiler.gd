@@ -1,34 +1,43 @@
 extends Node
-## Performance / memory-leak profiler for the NONO audit.
+## Performance / lifecycle profiler for NONO.
 ##
-## Measures live Performance monitors (objects, nodes, orphan nodes) around the
-## suspected leak points, then runs a 10+ wave continuous sim and records the
-## per-wave trend. Prints a [SECTION] line per measurement so before/after runs
-## can be diffed.
-##
-## Run via run_tests on this file (headless: no draw calls) OR by running the
-## matching perf_profiler.tscn in the editor/Game tab (real render -> draw calls).
+## Isolated churn checks run first, followed by a continuous multi-wave sim that
+## uses real enemy death, wave transitions, upgrade choices, and wave cleanup.
+## Performance counters are observations only; this script does not claim an FPS
+## improvement from them. Scene runs auto-start; run_tests gets one startup and
+## waits for profile cleanup before reporting.
 
-var _game: Node2D
-var _sim_game: Node2D
-var _failures := 0
-
-# Wave-sim driver state.
-var _sim_active := false
-var _sim_target := 11
-var _last_sampled_wave := 0
-var _pending_sample := 0
-var _emitted_upgrade := false
-var _sim_timeout := 0.0
+var _game: Game
+var _sim_game: Game
+var _failures: int = 0
 var _wave_samples: Array[Dictionary] = []
 
-const M_OBJECT := "OBJECT_COUNT"
-const M_NODES := "OBJECT_NODE_COUNT"
-const M_ORPHAN := "OBJECT_ORPHAN_NODE_COUNT"
-const M_DRAW := "RENDER_TOTAL_DRAW_CALLS_IN_FRAME"
+var _sim_active: bool = false
+var _sim_target: int = 11
+var _last_sampled_wave: int = 0
+var _pending_sample: int = 0
+var _emitted_upgrade: bool = false
+var _sim_timeout: float = 180.0
+var _started: bool = false
+var _profile_complete: bool = false
+var _cleanup_complete: bool = false
+var _cleanup_step: int = 0
+var _scene_run: bool = false
+
+signal _test_finished
+
+func _ready() -> void:
+	_scene_run = get_tree().current_scene == self
+	if _scene_run:
+		call_deferred("_start_scene_test")
+
+func _start_scene_test() -> void:
+	if _started:
+		return
+	_start_profile()
 
 func _snapshot(tag: String) -> Dictionary:
-	var s := {
+	var snapshot: Dictionary = {
 		"tag": tag,
 		"objects": Performance.get_monitor(Performance.OBJECT_COUNT),
 		"nodes": Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
@@ -36,147 +45,165 @@ func _snapshot(tag: String) -> Dictionary:
 		"draw": Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 	}
 	print("[SNAP] %-28s objects=%-6d nodes=%-6d orphans=%-4d draw=%d" % [
-		tag, s["objects"], s["nodes"], s["orphans"], s["draw"]])
-	return s
+		tag, snapshot["objects"], snapshot["nodes"], snapshot["orphans"], snapshot["draw"]])
+	return snapshot
 
-func _report(name: String, ok: bool, detail: String = "") -> void:
+func _report(check_name: String, ok: bool, detail: String = "") -> void:
 	if ok:
-		print("[PASS] ", name, " ", detail)
+		print("[PASS] ", check_name, " ", detail)
 	else:
 		_failures += 1
-		print("[FAIL] ", name, " ", detail)
+		print("[FAIL] ", check_name, " ", detail)
 
-var _started := false
-
-func _ready() -> void:
-	_start_profile()
-
-## Entry point for Ziva's run_tests (which invokes test_* methods).
+## Entry point for run_tests; waits for the async profiling run and cleanup.
 func test_profile() -> void:
-	_start_profile()
+	if not _started:
+		_start_profile()
+	if not _cleanup_complete:
+		await _test_finished
+	assert(_failures == 0, "Performance profiler found %d failure(s)" % _failures)
 
 func _start_profile() -> void:
 	if _started:
 		return
 	_started = true
-	# Keep driving while the wave-clear upgrade panel pauses the tree.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_run()
 
 func _run() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
-	var packed := load("res://scenes/game.tscn") as PackedScene
-	_game = packed.instantiate()
+	var packed: PackedScene = load("res://scenes/game.tscn") as PackedScene
+	_game = packed.instantiate() as Game
 	add_child(_game)
 	await get_tree().process_frame
 	await get_tree().process_frame
 
-	print("===== PROFILER: game booted, wave=%d =====" % _game._wave)
-	# Freeze this game's wave flow for the isolated section tests: keep
-	# _alive_enemies high so wave-advance (and its extra coin scatters /
-	# upgrade-pause) never fires mid-measurement.
+	# Keep the real initial wave alive while measuring synthetic churn. Invalidate
+	# its delayed spawn callbacks and avoid creating a second full wave by hand.
+	_game._wave_epoch += 1
 	_game._alive_enemies = 999999
 	_snapshot("baseline")
-
-	await _enemy_churn()
+	_enemy_churn()
 	await _bolt_churn()
 	await _fx_churn()
 	await _sfx_churn()
 
-	# Start the continuous 10+ wave sim on a FRESH game instance (wave 1 -> N),
-	# isolated from the section tests' residual coins/enemies. Drop the section
-	# game first so its coins don't pollute the sim's per-wave coin counts.
-	print("===== PROFILER: starting %d-wave continuous sim =====" % _sim_target)
+	# Drop the isolated-measurement world so the continuous run has clean groups
+	# and a fresh FX owner.
 	_game.queue_free()
 	_game = null
 	await get_tree().process_frame
 	await get_tree().process_frame
-	_sim_game = packed.instantiate()
+
+	print("===== PROFILER: starting %d-wave continuous sim =====" % _sim_target)
+	_sim_game = packed.instantiate() as Game
 	add_child(_sim_game)
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_sim_active = true
-	_last_sampled_wave = 0
-	_pending_sample = 0
-	_sim_timeout = 300.0
+	_last_sampled_wave = _sim_game._wave
+	_pending_sample = _sim_game._wave
+	_sim_timeout = 180.0
+	_drive_sim(0.0)
 
 func _process(delta: float) -> void:
+	if _cleanup_step > 0:
+		_cleanup_step += 1
+		if _cleanup_step >= 8:
+			_cleanup_complete = true
+			_test_finished.emit()
+			if _scene_run:
+				get_tree().quit()
+			_cleanup_step = 0
+		return
 	if _sim_active:
+		# Test-only acceleration: preserve gameplay transitions while reducing
+		# the wall-clock time needed to sample 11 waves.
+		Engine.time_scale = 5.0
 		_drive_sim(delta)
-	else:
-		# During the section tests, keep the booted game from sitting paused on
-		# the wave-clear upgrade panel (a paused tree freezes audio/timers and
-		# would corrupt the sfx/fx measurements).
+		if not _profile_complete and is_instance_valid(_sim_game):
+			_sim_game.player.hp = _sim_game.player.max_hp
+			if _pending_sample != 0 and _sim_game._wave == _pending_sample \
+					and _sim_game._alive_enemies <= 0:
+				_record_pending_wave()
+	elif is_instance_valid(_game):
 		_auto_pick_upgrade(_game)
 
-func _auto_pick_upgrade(g: Node2D) -> void:
-	if g == null or not is_instance_valid(g):
+func _record_pending_wave() -> void:
+	var sampled_wave: int = _pending_sample
+	_pending_sample = 0
+	var snapshot: Dictionary = _snapshot("wave %d" % sampled_wave)
+	snapshot["coins"] = get_tree().get_nodes_in_group("coins").size()
+	snapshot["powerups"] = get_tree().get_nodes_in_group("powerups").size()
+	_wave_samples.append(snapshot)
+	if sampled_wave >= _sim_target:
+		_finish()
+
+func _auto_pick_upgrade(game: Game) -> void:
+	if not is_instance_valid(game):
 		return
-	if g.upgrade_panel.visible and get_tree().paused and not _emitted_upgrade:
+	if game.upgrade_panel.visible and get_tree().paused and not _emitted_upgrade:
 		_emitted_upgrade = true
-		g.upgrade_chosen.emit("speed")
-	if not g.upgrade_panel.visible:
+		game._on_upgrade_chosen("speed")
+	elif not game.upgrade_panel.visible:
 		_emitted_upgrade = false
 
 func _drive_sim(delta: float) -> void:
-	if _sim_game == null or not is_instance_valid(_sim_game):
-		print("[FAIL] wave sim lost game node")
+	if not _sim_active or _profile_complete:
+		return
+	if not is_instance_valid(_sim_game):
+		print("[FAIL] continuous sim lost its Game node")
 		_finish()
 		return
-	_sim_timeout -= delta
+	if delta > 0.0:
+		_sim_timeout -= delta
 	if _sim_timeout <= 0.0:
-		print("[FAIL] wave sim timed out (reached wave %d)" % _sim_game._wave)
+		print("[FAIL] continuous sim timed out at wave %d" % _sim_game._wave)
 		_finish()
 		return
-	# Keep the pilot alive so death can never stall the run.
+
+	# Keep the pilot alive and clear enemies through the real death handlers.
+	# Avoid touching enemies on a paused upgrade screen; the wave starts after
+	# _on_upgrade_chosen resumes the tree.
 	_sim_game.player.hp = _sim_game.player.max_hp
-	# Aggressively clear the field so waves progress as fast as real play allows.
-	for node in get_tree().get_nodes_in_group("enemies"):
-		var e := node as Enemy
-		if e != null and is_instance_valid(e) and not e._dead:
-			e.die(true)
-	for node in get_tree().get_nodes_in_group("boss"):
-		var b := node as Boss
-		if b != null and is_instance_valid(b) and not b._dead:
-			b.take_damage(999, 1)
+	if not get_tree().paused and _sim_game._alive_enemies > 0:
+		_sim_game.debug_kill_all_enemies()
 	_auto_pick_upgrade(_sim_game)
-	# Sample whenever the wave counter advances (settle one frame so deferred
-	# queue_frees from wave-start cleanup have been processed).
-	var w: int = _sim_game._wave
-	if w != _last_sampled_wave and w >= 1:
-		if _pending_sample != 0:
-			var sampled: int = _pending_sample
-			_pending_sample = 0
-			_last_sampled_wave = sampled
-			var snap := _snapshot("wave %d" % sampled)
-			snap["coins"] = get_tree().get_nodes_in_group("coins").size()
-			snap["powerups"] = get_tree().get_nodes_in_group("powerups").size()
-			_wave_samples.append(snap)
-			if sampled >= _sim_target:
-				_finish()
-		else:
-			_pending_sample = w
+
+	var current_wave: int = _sim_game._wave
+	if current_wave != _last_sampled_wave:
+		_last_sampled_wave = current_wave
+		_pending_sample = current_wave
 
 func _enemy_churn() -> void:
 	print("===== SECTION 1b: enemy spawn/kill churn (wave-50 scale) =====")
-	var before := _snapshot("enemies before")
-	for i in 52:
+	# The baseline's delayed spawn callbacks were invalidated before this batch.
+	# The existing wave enemies are deliberately retained until the simulation
+	# world is discarded; only this synthetic batch is checked for deferral.
+	var before: Dictionary = _snapshot("enemies before")
+	var spawned_enemies: Array[Enemy] = []
+	for i: int in range(52):
 		_game._spawn_enemy()
+		var enemy: Enemy = _game.enemies.get_child(_game.enemies.get_child_count() - 1) as Enemy
+		if enemy != null:
+			spawned_enemies.append(enemy)
+	var spawned: int = spawned_enemies.size()
+
+	# Use die(false) to exercise the real removal signal and deferred-free path
+	# without scoring; set a high alive count to suppress a wave transition.
+	for enemy_to_kill: Enemy in spawned_enemies:
+		enemy_to_kill.die(false)
 	await get_tree().process_frame
 	await get_tree().process_frame
-	var spawned: int = get_tree().get_nodes_in_group("enemies").size()
-	for node in get_tree().get_nodes_in_group("enemies"):
-		var e := node as Enemy
-		if e != null and is_instance_valid(e):
-			e.die(true)
-	await get_tree().process_frame
-	await get_tree().process_frame
-	var after := _snapshot("enemies after kill")
-	var remaining: int = get_tree().get_nodes_in_group("enemies").size()
-	_report("enemies free on death", remaining == 0, "spawned=%d remaining=%d" % [spawned, remaining])
-	_report("no orphan growth from enemy churn",
-		after["orphans"] - before["orphans"] <= 2,
+	var after: Dictionary = _snapshot("enemies after kill")
+	var remaining_synthetic: int = 0
+	for enemy_to_check: Enemy in spawned_enemies:
+		if is_instance_valid(enemy_to_check) and enemy_to_check.is_inside_tree():
+			remaining_synthetic += 1
+	_report("enemy churn frees all spawned nodes", spawned == 52 and remaining_synthetic == 0,
+		"spawned=%d remaining_synthetic=%d" % [spawned, remaining_synthetic])
+	_report("no orphan growth from enemy churn", after["orphans"] - before["orphans"] <= 2,
 		"orphans %d -> %d" % [before["orphans"], after["orphans"]])
 
 func _bolt_churn() -> void:
@@ -185,90 +212,117 @@ func _bolt_churn() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var boss: Boss = null
-	for child in _game.get_node("Enemies").get_children():
+	for child: Node in _game.enemies.get_children():
 		if child is Boss:
-			boss = child
+			boss = child as Boss
 			break
 	if boss == null:
-		_report("bolt churn: boss spawned", false)
+		_report("bolt churn boss spawn", false, "boss node missing")
 		return
-	var before := _snapshot("bolts before")
-	for i in 5:
+
+	var before: Dictionary = _snapshot("bolts before")
+	for i: int in range(5):
 		boss._fire_burst()
 	var in_flight: int = get_tree().get_nodes_in_group("boss_bolts").size()
 	print("[DATA] bolts in flight after 5 bursts: %d" % in_flight)
-	# Stop the boss's own AI so it can't fire fresh bursts during the wait
-	# (which would look like non-expiring bolts).
 	boss.set_physics_process(false)
-	# Bolts have a 3s life; give them time to expire and free (real-time wait:
-	# --headless runs process_frame uncapped, so frame counts != wall time).
+	# Boss bolts expire after 3 seconds; this timer runs on real time.
 	await get_tree().create_timer(3.8).timeout
 	await get_tree().process_frame
 	await get_tree().process_frame
-	var after := _snapshot("bolts after expiry")
+	var after: Dictionary = _snapshot("bolts after expiry")
 	var remaining: int = get_tree().get_nodes_in_group("boss_bolts").size()
-	_report("bolts free on expiry / hit", remaining == 0, "remaining=%d" % remaining)
-	_report("no orphan growth from bolt churn",
-		after["orphans"] - before["orphans"] <= 2,
+	_report("boss bolts free on expiry", in_flight == 40 and remaining == 0,
+		"in_flight=%d remaining=%d" % [in_flight, remaining])
+	_report("no orphan growth from bolt churn", after["orphans"] - before["orphans"] <= 2,
 		"orphans %d -> %d" % [before["orphans"], after["orphans"]])
 
 func _fx_churn() -> void:
 	print("===== SECTION 1d: Fx particle/popup churn =====")
-	# Flush any in-flight particles from earlier sections.
 	await get_tree().create_timer(0.4).timeout
-	var before := _snapshot("fx before")
-	for i in 40:
-		Fx.burst(Vector2(100 + i, 200), Color(1, 1, 1), 12, 200, 0.4, 1.0)
-		Fx.popup(Vector2(100 + i, 300), "+1", Color(1, 1, 1), 18)
-	# Particles free at lifetime+0.4; popups free at 0.7s tween end. Wait past both.
+	var before: Dictionary = _snapshot("fx before")
+	for i: int in range(40):
+		Fx.burst(Vector2(100.0 + i, 200.0), Color.WHITE, 12, 200.0, 0.4, 1.0)
+		Fx.popup(Vector2(100.0 + i, 300.0), "+1", Color.WHITE, 18)
+		Fx.ring(Vector2(100.0 + i, 200.0), Color.CYAN, 24.0, 2.0, 0.2)
+		Fx.flash(Vector2(100.0 + i, 200.0), Color.CYAN, 0.5, 0.1)
+		Fx.screen_flash(Color.CYAN, 0.05, 0.1)
 	await get_tree().create_timer(1.6).timeout
 	await get_tree().process_frame
 	await get_tree().process_frame
-	var after := _snapshot("fx after cleanup")
-	var orphan_delta: int = after["orphans"] - before["orphans"]
-	# Bursts/popups are POOLED (reused), so a bounded number of nodes stays
-	# alive as the pool instead of being freed. The check is that churn is
-	# bounded by the pool caps (64 particles + 32 popups), not unbounded growth.
-	_report("Fx pooled nodes stay bounded after cleanup",
-		after["nodes"] - before["nodes"] <= 96,
-		"nodes %d -> %d (delta %d, pool cap 64+32)" % [before["nodes"], after["nodes"], after["nodes"] - before["nodes"]])
-	_report("Fx leaves no orphan nodes", orphan_delta <= 2, "orphans %d -> %d" % [before["orphans"], after["orphans"]])
+	var after: Dictionary = _snapshot("fx after cleanup")
+	var orphan_delta: int = int(after["orphans"]) - int(before["orphans"])
+	var node_delta: int = int(after["nodes"]) - int(before["nodes"])
+	print("[VFX PERF] caps particles=%d lines=%d sprites=%d screens=%d; active post-cleanup particles=%d lines=%d sprites=%d overlays=%d; node_delta=%d draw=%d" % [
+		Fx.MAX_PARTICLE_POOL, Fx.MAX_LINE_POOL, Fx.MAX_SPRITE_POOL, Fx.MAX_SCREEN_POOL,
+		Fx._active_particles.size(), Fx._active_lines.size(), Fx._active_sprites.size(), Fx._active_screens.size(),
+		node_delta, after["draw"]])
+	_report("Fx pooled nodes stay bounded after cleanup", node_delta <= 124,
+		"nodes %d -> %d (delta %d; particle24+popup32+line16+sprite48+screen4 caps)" % [before["nodes"], after["nodes"], node_delta])
+	_report("Fx leaves no orphan nodes", orphan_delta <= 2,
+		"orphans %d -> %d" % [before["orphans"], after["orphans"]])
+	var active_particles: int = Fx._active_particles.size()
+	var active_lines: int = Fx._active_lines.size()
+	var active_sprites: int = Fx._active_sprites.size()
+	var active_screens: int = Fx._active_screens.size()
+	_report("Fx active lists stay within their caps",
+		active_particles <= Fx.MAX_PARTICLE_POOL and active_lines <= Fx.MAX_LINE_POOL
+		and active_sprites <= Fx.MAX_SPRITE_POOL and active_screens <= Fx.MAX_SCREEN_POOL,
+		"particles=%d lines=%d sprites=%d screens=%d" % [
+			Fx._active_particles.size(), Fx._active_lines.size(), Fx._active_sprites.size(), Fx._active_screens.size()])
 
 func _sfx_churn() -> void:
 	print("===== SECTION 1e: Sfx one-shot player churn =====")
 	await get_tree().create_timer(0.4).timeout
-	var s: Node = get_node_or_null("/root/Sfx")
-	if s == null:
-		_report("sfx autoload present", false)
+	var sfx: Node = get_node_or_null("/root/Sfx")
+	if sfx == null:
+		_report("Sfx autoload present", false)
 		return
-	var before: int = s.get_child_count()
-	for i in 40:
+	var before: int = sfx.get_child_count()
+	for i: int in range(40):
 		Sfx.play("explode", randf_range(0.9, 1.1))
-	# Real-time wait (headless process_frame is uncapped); the tree is kept
-	# unpaused by _auto_pick_upgrade so `finished` fires and players free.
 	await get_tree().create_timer(1.3).timeout
 	await get_tree().process_frame
-	var after: int = s.get_child_count()
-	_report("Sfx one-shot players free via finished->queue_free",
-		after <= before + 1,
-		"Sfx children %d -> %d (coin poly player + live players)" % [before, after])
+	var after: int = sfx.get_child_count()
+	_report("Sfx one-shot players free", after <= before + 1,
+		"Sfx children %d -> %d" % [before, after])
 
 func _finish() -> void:
+	if _profile_complete:
+		return
 	_sim_active = false
-	# Task 6: uncollected magnet/shield powerups used to survive every wave and
-	# pile up for the whole run. They are now cleared at each wave boundary, so
-	# the per-wave count must stay small instead of growing monotonically.
-	var pu_counts: Array[int] = []
-	var pu_max := 0
-	for s in _wave_samples:
-		var c: int = int(s.get("powerups", 0))
-		pu_counts.append(c)
-		pu_max = maxi(pu_max, c)
-	if not pu_counts.is_empty():
-		_report("powerups do not accumulate across waves", pu_max <= 8,
-			"per-wave powerups max=%d series=%s" % [pu_max, str(pu_counts)])
+	Engine.time_scale = 1.0
+	var samples_complete: bool = _wave_samples.size() >= _sim_target
+	_report("continuous sim reaches target wave", samples_complete,
+		"samples=%d target=%d reached_wave=%d" % [
+			_wave_samples.size(), _sim_target, _sim_game._wave if is_instance_valid(_sim_game) else -1])
+
+	var powerup_counts: Array[int] = []
+	var powerup_max: int = 0
+	for sample: Dictionary in _wave_samples:
+		var count: int = int(sample.get("powerups", 0))
+		powerup_counts.append(count)
+		powerup_max = maxi(powerup_max, count)
+	if not powerup_counts.is_empty():
+		_report("powerups do not accumulate across waves", powerup_max <= 8,
+			"max=%d per-wave=%s" % [powerup_max, str(powerup_counts)])
+
 	print("===== PROFILER SUMMARY: failures=%d =====" % _failures)
-	for s in _wave_samples:
+	for sample: Dictionary in _wave_samples:
 		print("  [WAVE] %-28s nodes=%-6d orphans=%d coins=%d powerups=%d" % [
-			s["tag"], s["nodes"], s["orphans"], s.get("coins", -1), s.get("powerups", -1)])
-	get_tree().quit()
+			sample["tag"], sample["nodes"], sample["orphans"],
+			sample.get("coins", -1), sample.get("powerups", -1)])
+
+	_profile_complete = true
+	if is_instance_valid(_sim_game):
+		_sim_game.queue_free()
+	if is_instance_valid(_game):
+		_game.queue_free()
+	_game = null
+	_cleanup_after_finish()
+
+func _cleanup_after_finish() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_sim_game = null
+	_cleanup_step = 1
