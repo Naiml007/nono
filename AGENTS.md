@@ -41,6 +41,8 @@ res://
 ├── scenes/                .tscn files, one per entity/UI
 │   ├── main_menu.tscn     Title screen + settings overlay
 │   ├── game.tscn          The whole run: world, HUD, camera, overlays
+│   ├── menu_space.tscn    Menu-only instance of the shared space backdrop
+│   ├── space_backdrop.tscn  Shared space plate + two star planes (menu + game)
 │   ├── touch_controls.tscn  On-screen joystick + DASH/PAUSE buttons (mobile)
 │   ├── player.tscn        CharacterBody2D robot pilot
 │   ├── enemy.tscn         Chaser drone (Area2D hitbox)
@@ -53,6 +55,8 @@ res://
 │   ├── touch_controls.gd  Virtual joystick (drives move_*) + touch DASH/PAUSE
 │   ├── joystick_visual.gd Draws the joystick base ring + knob
 │   ├── game_state.gd      Autoload: run state, best score, settings, input actions
+│   ├── space_backdrop.gd  Parallax space plate + star planes (menu + gameplay)
+│   ├── game_ui_layout.gd  Deterministic responsive HUD placement
 │   ├── player.gd
 │   ├── enemy.gd / boss.gd / boss_bolt.gd
 │   ├── coin.gd / power_up.gd
@@ -68,7 +72,7 @@ res://
 │   ├── fonts/             Chakra Petch (OFL) - UI font family
 │   ├── ui/                THE design system: nono_theme.tres + icons + README
 │   └── textures/ tilesets/   Mostly empty / unused
-├── shaders/               menu_bg.gdshader (procedural starfield backdrop)
+├── shaders/               menu_bg.gdshader (star plane) + menu_bg_material.tres
 ├── tests/                 Headless verification scripts + scenes
 ├── tools/                 chiptune_generator.gd (music synth)
 └── addons/                phantom_camera, GDQuest formatter, ziva_agent
@@ -222,6 +226,48 @@ directly. The three `repeat` entries guarantee the pool can never empty over a
   for a matrix of viewport sizes on both cameras.
 - Manager is an autoload (`PhantomCameraManager`) AND registers itself as an engine singleton named `PhantomCameraManager`.
 
+### Space backdrop (menu + gameplay)
+
+- `scenes/space_backdrop.tscn` (`class_name SpaceBackdrop extends CanvasLayer`)
+  is the ONE backdrop used by both screens: an authored plate
+  (`assets/generated/menu_nebula_backdrop.png`) plus two procedural star planes
+  driven by `shaders/menu_bg.gdshader` through `shaders/menu_bg_material.tres`.
+  `scenes/menu_space.tscn` is a thin instance for the menu; `game.tscn` embeds
+  the same scene with `parallax_target_path = NodePath("../Player")`.
+- The plate is a plain `TextureRect` (`STRETCH_KEEP_ASPECT_COVERED`, nearest
+  filter) with a `PLATE_OVERSCAN` of 1.12 so the parallax shift never exposes
+  an edge. `_fit_plate()` re-fits it on every `size_changed` and crops the star
+  planes to the same rect via the shader's `horizontal_expand/horizontal_offset`.
+- In gameplay the layers shift by different amounts as the player crosses the
+  arena (`_apply_parallax`): plate ≤ 24×18 px, distant stars 8×6 px + a small
+  UV offset, near stars 20×14 px + a larger UV offset. This fakes camera
+  parallax **without** touching the fixed arena camera or gameplay positions.
+- **Reduced motion**: `GameState.reduce_motion` (persisted) makes
+  `SpaceBackdrop._apply_motion_preference()` zero the shader's `motion_scale`,
+  stop the parallax follow, and `set_process(false)` — the backdrop then stays
+  fully static. The setting is toggled from the main-menu settings overlay and
+  is honoured live (no reload needed) because the backdrop listens to
+  `GameState.settings_changed`.
+- The old procedural nebula in `menu_bg.gdshader` was split out: the shader now
+  draws ONLY a transparent star plane, and the nebula/planet look comes from the
+  authored plate. Keep it that way — the plate is art, the shader is twinkle.
+
+### Responsive HUD (scripts/game_ui_layout.gd)
+
+- `class_name GameUILayout extends RefCounted` — a static, deterministic
+  placement pass for the gameplay HUD. `game.gd` calls
+  `GameUILayout.apply(hud_canvas, get_viewport_rect().size)` on `_ready` and on
+  every `size_changed`.
+- Three layout tiers: standard (≥1024×600), compact (≤1024 wide or ≤600 tall)
+  and **tiny** (≤600 wide). Tiny stacks the score/wave readout under the hearts
+  and centers the boss bar; standard/compact keep the score/wave readout inline
+  to the left of the MENU button and the boss bar between the health cluster
+  and the readout (falling back to a centered bar when there is no room).
+- The pass never overlaps the HUD clusters: health (left), readout (right of
+  health), MENU button (top-right) and the boss bar keep a 12 px gap at every
+  size. `tests/menu_layout_test.gd` asserts this for 1280×720, 1920×1080,
+  960×540, 800×450 and 480×270.
+
 ### Audio
 
 - `Sfx`: loads wavs from `assets/audio/sfx/`; `play(name, pitch=1, vol=0)`.
@@ -249,21 +295,38 @@ directly. The three `repeat` entries guarantee the pool can never empty over a
 
 ### FX (juice)
 
-`Fx.burst(at, color, ...)` → one-shot `CPUParticles2D`; `Fx.popup(at, text,
-...)` → tweened floating Label; `Fx.shake(amount, dur)` → camera offset jitter.
-Requires `Fx.setup(world, camera)` once per scene (done by `game.gd`).
+`Fx.setup(world, camera)` is called on each game scene to bind the VFX pools to
+that world and camera and reset transient time/camera state. Public effects:
 
-Bursts and popups are **pooled** (capped at 64 particles / 32 popups): a parked
-node stays a child of the world but is inert, so effects never churn the
-SceneTree during play. `Fx` is `PROCESS_MODE_ALWAYS` so a hit-stop that
-overlaps a pause still restores `Engine.time_scale`.
+- Legacy-compatible `burst(at, color, amount, speed, lifetime, scale)`,
+  `popup(at, text, color, size)`, `shake(amount, duration)`, and `hitstop(duration)`.
+- `ring(at, color, radius, width, duration)` and `aim_line(from, to, color,
+  duration)` use an expanding circle or growing telegraph line.
+- `spark(at, dir, color, count, speed, lifetime, spread)` and
+  `debris(at, color, count, speed, lifetime)` emit directional or spinning
+  particles. Both reuse the CPU particle pool.
+- `afterimage(texture, at, angle, scale, tint, life)` and
+  `flash(at, color, strength, duration)` use pooled sprites.
+- `screen_flash(color, strength, duration)` and `vignette(enabled)` share a
+  viewport overlay layer. `slowmo(scale, duration)` adds reversible partial
+  time dilation, and `zoom_punch(amount, duration)` respects the arena zoom
+  floor while retaining player/boss camera zoom ratio.
+
+All effect lifetimes and flashes are managed in real milliseconds by `Fx`'s
+`PROCESS_MODE_ALWAYS` loop, so they expire through pause/hit-stop without
+creating a Tween/Timer per play. Every pool is capped: 24 CPUParticles2D,
+32 popup Labels, 16 Line2D ring/aim slots, 48 sprites, and 4 screen ColorRects.
+Parked nodes are invisible/inert; positions are clamped to the fixed 1280×720
+arena. `Fx.shake` remains the sole writer of `Camera2D.offset`; no Phantom
+Camera noise is enabled, avoiding competing camera-offset ownership. Screen
+flash overlays use CanvasLayer 4, below touch controls at layer 5.
 
 ## Persistence (user://)
 
 | File | What | Written by |
 | --- | --- | --- |
 | `user://nono_save.cfg` | Best score (`meta/best`) | `GameState` on death |
-| `user://nono_settings.cfg` | `wasd`, `mouse_dash`, `touch`, master/music/sfx volume, fullscreen | `GameState` on change (volume writes are debounced 0.5s, flushed on exit) |
+| `user://nono_settings.cfg` | `wasd`, `mouse_dash`, `touch`, `reduce_motion`, master/music/sfx volume, fullscreen | `GameState` on change (volume writes are debounced 0.5s, flushed on exit) |
 | `user://nono_achievements.cfg` | Unlocked id list | `Achievements` |
 
 All are simple `ConfigFile`s.
@@ -275,6 +338,7 @@ Headless test scripts live in `tests/` (each with a tiny `.tscn`):
 | Test | Verifies |
 | --- | --- |
 | `boss_flow_test.gd` | Boss spawn/HP/dash-damage/bar/cam, solo achievement, heart + magnet/shield despawn between waves, standing inside the boss keeps damaging, pooled FX + polyphonic SFX, `health_changed` never negative |
+| `vfx_test.gd` | Pooled effect lifecycle, screen/line/sprite caps, slowmo real-time restore, cleanup, and bounded node count |
 | `audit_fix_test.gd` | i-frames award no kill/score (drone is still cleared) but a dash-through still scores; boss bolts pass through an invulnerable player yet are consumed when they land or the shield eats them; two achievement toasts claim different slots; the world freezes behind the game-over panel |
 | `camera_test.gd` | Player cam active by default; boss cam priority → zoom 1.2; back to 1.0; visible world rect stays inside the arena for a matrix of viewport sizes on both cams |
 | `coin_pos_test.gd` | All spawned coins land inside the 1280×720 arena |
@@ -283,7 +347,9 @@ Headless test scripts live in `tests/` (each with a tiny `.tscn`):
 | `mobile_ui_test.gd` | `TouchControls` is `PROCESS_MODE_ALWAYS`; the emulated-mouse swallow is limited to the steering zone so the HUD Menu button works on touch; freeing the node releases `move_*` and a new instance scrubs leaked presses; PAUSE/DASH never cover the HUD hearts |
 | `retry_test.gd` | Real `reload_current_scene()` from a paused + hit-stopped state leaves the new run unpaused at `time_scale == 1.0` |
 | `upgrade_panel_test.gd` | Upgrade offer: exactly 3 cards, pause/unpause, buff applied once, STACK/ONCE-PER-RUN/REPEATABLE chips, out-of-range index ignored, pool never empties over 50 waves |
-| `progress_persistence_test.gd` | Settings round-trip (volume/fullscreen), corrupted/missing file fallbacks, achievement persistence, reset_progress keeps settings, volume writes are debounced |
+| `progress_persistence_test.gd` | Settings round-trip (volume/fullscreen/reduce-motion), corrupted/missing file fallbacks, achievement persistence, reset_progress keeps settings, volume writes are debounced |
+| `menu_layout_test.gd` | Menu focus + backdrop wiring, settings/achievements overlays stay reachable, reduce-motion toggle present, and the HUD clusters (health / readout / MENU / boss bar) never overlap at 1280×720 → 480×270 |
+| `backdrop_parallax_test.gd` | The gameplay backdrop processes, the plate and both star planes shift with the player, the near plane parallaxes more than the distant one, and reduced motion freezes all of it |
 | `smoke_test.gd` | Wave 1→50 boss kill→game over flow, score+best labels, retry reset, menu unpause |
 | `touch_input_test.gd` | Virtual joystick drives move_* actions, DASH/PAUSE route to try_dash/pause, auto show/hide, emulated-mouse swallow, safe-area anchors, controls disabled while the upgrade panel is open, touch_controls round-trip |
 
@@ -339,7 +405,8 @@ project-wide via `gui/theme/custom` in `project.godot`. See
   `theme_override_styles` to a node** — add or reuse a `theme_type_variation`
   instead (`Display`, `Title`, `Heading`, `Body`, `Small`, `Readout`, `Gold`,
   `ChipStack/Once/Repeat`, `Section`, `Badge`, `BossTitle`, `Ach*`, `Toast*`,
-  `FloatPopup`, `PopupSmall`, `DebugInfo`, `FloatPanel`, `DebugPanel`; buttons:
+  `FloatPopup`, `PopupSmall`, `DebugInfo`, `FloatPanel`, `DebugPanel`; panels:
+  `MenuPanel`, `OverlaysPanel`, `HUDPanel`, `HUDReadoutPanel`; buttons:
   `Primary`, `Ghost`, `Danger`, `Hud`, `Touch`, `Card`).
 - **Exactly 6 font sizes exist** (16/18/24/28/32/48). Never introduce a 7th;
   new text picks an existing scale step. Same for styleboxes built in code
@@ -354,8 +421,9 @@ project-wide via `gui/theme/custom` in `project.godot`. See
 ## Git & GitHub
 
 - Remote: `https://github.com/Naiml007/nono.git` (branch `main`).
-- `.gitignore` excludes `.godot/`, `builds/`, `.ziva/`, and the large
-  `zivacode/` binary. Do not commit `builds/`.
+- `.gitignore` excludes `.godot/`, `builds/`, `.ziva/`, the large `zivacode/`
+  binary, and local editor state (`.idea/`, `.vscode/`, `.impeccable/`). Do not
+  commit `builds/`.
 - Commit in small logical units; push with `git push origin main`.
 - **CI**: `.github/workflows/build.yml` runs the headless suite on every
   push/PR, and on `main` (plus `v*` tags and manual runs) also exports the
