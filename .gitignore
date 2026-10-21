@@ -9,6 +9,11 @@ builds.rar
 # Local tooling state
 .ziva/
 addons/.ziva_update_temp.zip
+.impeccable/
+
+# Editor / IDE state
+.idea/
+.vscode/
 
 # Ziva runtime binary exceeds GitHub's 100 MB per-file limit
 /addons/ziva_agent/zivacode/
