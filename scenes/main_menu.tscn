@@ -1,12 +1,9 @@
 [gd_scene format=3 uid="uid://cemie5jly25y4"]
 
 [ext_resource type="Script" uid="uid://ccdl8wqmhlyf3" path="res://scripts/main_menu.gd" id="1_menu"]
-[ext_resource type="Shader" uid="uid://cwqg8d8c6l8ao" path="res://shaders/menu_bg.gdshader" id="3_shader"]
-[ext_resource type="Texture2D" uid="uid://3s7pgfsky622" path="res://assets/sprites/player_robot.png" id="4_robot"]
+[ext_resource type="Script" uid="uid://b1ayamcbd8ups" path="res://scripts/space_backdrop.gd" id="3_wu84c"]
 [ext_resource type="Texture2D" uid="uid://b3x22ks0x2r63" path="res://assets/generated/logo_banner_frame_0.png" id="5_logo"]
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_bg"]
-shader = ExtResource("3_shader")
+[ext_resource type="PackedScene" uid="uid://4qd1v2u4qlnk" path="res://scenes/space_backdrop.tscn" id="6_backdrop"]
 
 [node name="MainMenu" type="Control" unique_id=939725838]
 layout_mode = 3
@@ -17,52 +14,31 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_menu")
 
-[node name="Background" type="ColorRect" parent="." unique_id=1834039688]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.04, 0.05, 0.09, 1)
-
-[node name="Starfield" type="ColorRect" parent="." unique_id=2030225151]
-material = SubResource("ShaderMaterial_bg")
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
+[node name="SpaceBackdrop" type="CanvasLayer" parent="." unique_id=654542121 instance=ExtResource("6_backdrop")]
+layer = -10
+script = ExtResource("3_wu84c")
 
 [node name="Center" type="CenterContainer" parent="." unique_id=983065057]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+anchors_preset = -1
+anchor_left = 0.04
+anchor_top = 0.04
+anchor_right = 0.49
+anchor_bottom = 0.96
 
 [node name="Panel" type="PanelContainer" parent="Center" unique_id=878301273]
 layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_type_variation = &"MenuPanel"
 
 [node name="VBox" type="VBoxContainer" parent="Center/Panel" unique_id=131064521]
 layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="Robot" type="TextureRect" parent="Center/Panel/VBox" unique_id=1013080260]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(72, 72)
-layout_mode = 2
-size_flags_horizontal = 4
-texture = ExtResource("4_robot")
-expand_mode = 1
-stretch_mode = 5
+theme_override_constants/separation = 8
 
 [node name="Logo" type="TextureRect" parent="Center/Panel/VBox" unique_id=511464183]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(400, 134)
+custom_minimum_size = Vector2(360, 120)
 layout_mode = 2
 texture = ExtResource("5_logo")
 expand_mode = 1
@@ -75,33 +51,33 @@ text = "ENDLESS SPACE SURVIVAL"
 horizontal_alignment = 1
 
 [node name="Spacer" type="Control" parent="Center/Panel/VBox" unique_id=853116166]
-custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
+size_flags_vertical = 3
 
 [node name="PlayButton" type="Button" parent="Center/Panel/VBox" unique_id=1337622671]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(280, 56)
+custom_minimum_size = Vector2(256, 48)
 layout_mode = 2
 theme_type_variation = &"Primary"
 text = "PLAY"
 
 [node name="SettingsButton" type="Button" parent="Center/Panel/VBox" unique_id=608937330]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(280, 56)
+custom_minimum_size = Vector2(256, 48)
 layout_mode = 2
 theme_type_variation = &"Ghost"
 text = "SETTINGS"
 
 [node name="AchievementsButton" type="Button" parent="Center/Panel/VBox" unique_id=608937331]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(280, 56)
+custom_minimum_size = Vector2(256, 48)
 layout_mode = 2
 theme_type_variation = &"Ghost"
 text = "ACHIEVEMENTS"
 
 [node name="QuitButton" type="Button" parent="Center/Panel/VBox" unique_id=1706965798]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(280, 56)
+custom_minimum_size = Vector2(256, 48)
 layout_mode = 2
 theme_type_variation = &"Ghost"
 text = "QUIT"
@@ -116,13 +92,15 @@ horizontal_alignment = 1
 [node name="ControlsHint" type="Label" parent="." unique_id=1201842740]
 unique_name_in_owner = true
 layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
+anchors_preset = -1
+anchor_left = 0.52
 anchor_top = 1.0
-anchor_right = 0.5
+anchor_right = 0.52
 anchor_bottom = 1.0
-offset_top = -46.0
-offset_bottom = -18.0
+offset_left = -310.0
+offset_top = -32.0
+offset_right = 310.0
+offset_bottom = -4.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_type_variation = &"SmallHud"
@@ -155,7 +133,9 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="SettingsPanel" type="PanelContainer" parent="SettingsOverlay/SettingsCenter" unique_id=825402553]
+custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
+theme_type_variation = &"OverlaysPanel"
 
 [node name="SettingsVBox" type="VBoxContainer" parent="SettingsOverlay/SettingsCenter/SettingsPanel" unique_id=171161963]
 layout_mode = 2
@@ -167,42 +147,55 @@ theme_type_variation = &"Title"
 text = "SETTINGS"
 horizontal_alignment = 1
 
-[node name="WasdToggle" type="CheckButton" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=1975196972]
+[node name="SettingsScroll" type="ScrollContainer" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=2100000210]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="SettingsContent" type="VBoxContainer" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SettingsScroll" unique_id=2100000211]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="WasdToggle" type="CheckButton" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SettingsScroll/SettingsContent" unique_id=1975196972]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 44)
 layout_mode = 2
 text = "WASD movement"
 
-[node name="MouseDashToggle" type="CheckButton" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=1464649638]
+[node name="MouseDashToggle" type="CheckButton" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SettingsScroll/SettingsContent" unique_id=1464649638]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 44)
 layout_mode = 2
 text = "Mouse click to dash"
 
-[node name="TouchToggle" type="CheckButton" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=1464649639]
+[node name="TouchToggle" type="CheckButton" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SettingsScroll/SettingsContent" unique_id=1464649639]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 44)
 layout_mode = 2
 text = "Touch controls"
 
-[node name="AudioHeader" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=1023922732]
+[node name="AudioHeader" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SettingsScroll/SettingsContent" unique_id=1023922732]
 layout_mode = 2
 theme_type_variation = &"Section"
 text = "VOLUME"
 horizontal_alignment = 1
 
-[node name="MasterVolumeRow" type="HBoxContainer" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=2099574891]
+[node name="MasterVolumeRow" type="HBoxContainer" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SettingsScroll/SettingsContent" unique_id=2099574891]
 custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="MasterVolumeName" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MasterVolumeRow" unique_id=486437179]
+[node name="MasterVolumeName" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SettingsScroll/SettingsContent/MasterVolumeRow" unique_id=486437179]
 custom_minimum_size = Vector2(92, 0)
 layout_mode = 2
 theme_type_variation = &"Body"
 text = "Master"
 
-[node name="MasterVolumeSlider" type="HSlider" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MasterVolumeRow" unique_id=1958817629]
+[node name="MasterVolumeSlider" type="HSlider" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SettingsScroll/SettingsContent/MasterVolumeRow" unique_id=1958817629]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
@@ -212,7 +205,7 @@ max_value = 1.0
 step = 0.02
 value = 1.0
 
-[node name="MasterVolumeValue" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MasterVolumeRow" unique_id=504750863]
+[node name="MasterVolumeValue" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SettingsScroll/SettingsContent/MasterVolumeRow" unique_id=504750863]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(44, 0)
 layout_mode = 2
@@ -220,18 +213,18 @@ theme_type_variation = &"Small"
 text = "100%"
 horizontal_alignment = 2
 
-[node name="MusicVolumeRow" type="HBoxContainer" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=378533364]
+[node name="MusicVolumeRow" type="HBoxContainer" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SettingsScroll/SettingsContent" unique_id=378533364]
 custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="MusicVolumeName" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MusicVolumeRow" unique_id=10874255]
+[node name="MusicVolumeName" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SettingsScroll/SettingsContent/MusicVolumeRow" unique_id=10874255]
 custom_minimum_size = Vector2(92, 0)
 layout_mode = 2
 theme_type_variation = &"Body"
 text = "Music"
 
-[node name="MusicVolumeSlider" type="HSlider" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MusicVolumeRow" unique_id=388506265]
+[node name="MusicVolumeSlider" type="HSlider" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SettingsScroll/SettingsContent/MusicVolumeRow" unique_id=388506265]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
@@ -241,7 +234,7 @@ max_value = 1.0
 step = 0.02
 value = 1.0
 
-[node name="MusicVolumeValue" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/MusicVolumeRow" unique_id=1115773723]
+[node name="MusicVolumeValue" type="Label" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox/SettingsScroll/SettingsContent/MusicVolumeRow" unique_id=1115773723]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(44, 0)
 layout_mode = 2
@@ -303,6 +296,12 @@ layout_mode = 2
 theme_type_variation = &"Danger"
 text = "Reset progress"
 
+[node name="ReduceMotionToggle" type="CheckButton" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=1464649640]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 44)
+layout_mode = 2
+text = "Reduce background motion"
+
 [node name="BackButton" type="Button" parent="SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox" unique_id=900109791]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 52)
@@ -336,7 +335,9 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="AchievementsPanel" type="PanelContainer" parent="AchievementsOverlay/AchievementsCenter" unique_id=825402554]
+custom_minimum_size = Vector2(600, 0)
 layout_mode = 2
+theme_type_variation = &"OverlaysPanel"
 
 [node name="AchievementsVBox" type="VBoxContainer" parent="AchievementsOverlay/AchievementsCenter/AchievementsPanel" unique_id=171161964]
 layout_mode = 2
@@ -350,7 +351,7 @@ text = "ACHIEVEMENTS"
 horizontal_alignment = 1
 
 [node name="AchievementsScroll" type="ScrollContainer" parent="AchievementsOverlay/AchievementsCenter/AchievementsPanel/AchievementsVBox" unique_id=2100000123]
-custom_minimum_size = Vector2(520, 360)
+custom_minimum_size = Vector2(540, 360)
 layout_mode = 2
 size_flags_vertical = 3
 

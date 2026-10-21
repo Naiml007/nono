@@ -72,6 +72,7 @@ const BUFFS := {
 @onready var boss_cam: Node2D = %BossCam
 @onready var pause_panel: PauseMenu = %PausePanel
 @onready var touch_controls: TouchControls = %TouchControls
+@onready var hud_canvas: CanvasLayer = $HUD
 
 var _rng := RandomNumberGenerator.new()
 var _wave := 0
@@ -121,6 +122,9 @@ func _ready() -> void:
 	_update_hearts()
 	_update_power_icons()
 	_update_ui()
+	_update_hud_layout()
+	if not get_viewport().size_changed.is_connected(_update_hud_layout):
+		get_viewport().size_changed.connect(_update_hud_layout)
 	# Camera bounds must be in place before the first frame renders: apply them
 	# now, keep them correct when the window/viewport is resized, and re-pin the
 	# host limits whenever the PhantomCamera addon forwards its own.
@@ -904,6 +908,11 @@ func _update_power_icons() -> void:
 
 func _on_score_changed(_new: int) -> void:
 	_update_ui()
+
+func _update_hud_layout() -> void:
+	if not is_node_ready():
+		return
+	GameUILayout.apply(hud_canvas, get_viewport_rect().size)
 
 func _update_ui() -> void:
 	score_label.text = "Score: %d" % GameState.score

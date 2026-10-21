@@ -1,7 +1,18 @@
 shader_type canvas_item;
-// Procedural animated space backdrop for the main menu: a deep-space gradient,
-// drifting nebula clouds, and a field of twinkling stars. Resolution
-// independent and fully TIME-driven, so no texture or per-frame script work.
+// A transparent, resolution-independent star plane. Nebula and planetary forms
+// live in the authored background plate underneath, leaving this layer to add
+// only distant twinkle. TIME keeps the animation self-contained and inexpensive.
+
+uniform float star_density : hint_range(0.0, 0.03) = 0.008;
+uniform float star_opacity : hint_range(0.0, 0.6) = 0.17;
+uniform float star_drift : hint_range(0.0, 0.1) = 0.012;
+uniform float star_scale : hint_range(0.5, 2.0) = 1.0;
+uniform float motion_scale : hint_range(0.0, 1.0) = 1.0;
+uniform vec2 field_offset = vec2(0.0);
+uniform vec2 parallax_uv_offset = vec2(0.0);
+uniform float horizontal_crop : hint_range(0.0, 0.5) = 0.0;
+uniform float horizontal_expand : hint_range(0.0, 1.0) = 1.0;
+uniform float horizontal_offset : hint_range(0.0, 0.5) = 0.0;
 
 float hash21(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21));
@@ -11,29 +22,16 @@ float hash21(vec2 p) {
 
 void fragment() {
 	vec2 uv = UV;
-
-	// Deep space base with a subtle vertical gradient.
-	vec3 col = mix(vec3(0.012, 0.018, 0.04), vec3(0.028, 0.045, 0.09), uv.y);
-
-	// Drifting nebula clouds (teal + purple).
-	float n = sin(uv.x * 4.0 + TIME * 0.03) * sin(uv.y * 6.0 - TIME * 0.02)
-			+ sin((uv.x + uv.y * 0.7) * 8.0 + TIME * 0.04);
-	float neb = smoothstep(0.2, 1.0, n * 0.5 + 0.5);
-	col += vec3(0.09, 0.17, 0.3) * neb;
-	col += vec3(0.24, 0.12, 0.36) * smoothstep(0.55, 1.0, n * 0.5 + 0.5) * 0.5;
-
-	// Common small stars, each twinkling at its own phase.
-	vec2 cell = floor(uv * vec2(90.0, 60.0));
-	float r = hash21(cell);
-	float tw = 0.55 + 0.45 * sin(TIME * (1.5 + r * 5.0) + cell.x * 13.0 + cell.y * 7.0);
-	float star = step(0.99, r) * tw;
-	col += vec3(0.75, 0.88, 1.0) * star;
-
-	// Rare brighter warm stars.
-	float r2 = hash21(cell + vec2(31.7, 17.3));
-	float tw2 = 0.5 + 0.5 * sin(TIME * (2.0 + r2 * 3.0) + cell.y * 11.0);
-	float star2 = step(0.997, r2) * tw2;
-	col += vec3(1.0, 0.92, 0.8) * star2 * 1.4;
-
-	COLOR = vec4(col, 1.0);
+	uv.x = uv.x * horizontal_expand + horizontal_offset;
+	uv += parallax_uv_offset + vec2(TIME * star_drift, TIME * star_drift * 0.42) * motion_scale + field_offset;
+	vec2 star_uv = uv * star_scale;
+	vec2 cell = floor(star_uv * vec2(128.0, 72.0));
+	vec2 local = fract(star_uv * vec2(128.0, 72.0));
+	float seed = hash21(cell);
+	float phase = TIME * motion_scale * (0.7 + seed * 1.4) + cell.x * 17.0 + cell.y * 9.0;
+	float twinkle = 0.65 + 0.35 * sin(phase);
+	float star = step(1.0 - star_density, seed);
+	float core = 1.0 - smoothstep(0.02, 0.11, length(local - vec2(0.5)));
+	float intensity = star * core * twinkle * star_opacity;
+	COLOR = vec4(vec3(0.68, 0.84, 1.0), intensity);
 }

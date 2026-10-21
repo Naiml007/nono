@@ -25,7 +25,7 @@ extends Control
 @onready var reset_confirm: ConfirmationDialog = %ResetConfirm
 @onready var back_button: Button = %BackButton
 @onready var title_logo: TextureRect = %Logo
-@onready var robot: TextureRect = %Robot
+@onready var reduce_motion_toggle: CheckButton = %ReduceMotionToggle
 @onready var achievements_overlay: Control = %AchievementsOverlay
 @onready var achievements_title: Label = %AchievementsTitle
 @onready var achievements_list: VBoxContainer = %AchievementsList
@@ -33,9 +33,14 @@ extends Control
 
 func _ready() -> void:
 	# Set initial toggle state before connecting so ready-time signal fires are no-ops.
+	play_button.focus_mode = Control.FOCUS_ALL
+	play_button.grab_focus()
+	_set_responsive_layout()
+	get_viewport().size_changed.connect(_set_responsive_layout)
 	wasd_toggle.button_pressed = GameState.wasd_controls
 	mouse_dash_toggle.button_pressed = GameState.mouse_dash
 	touch_toggle.button_pressed = GameState.touch_controls
+	reduce_motion_toggle.button_pressed = GameState.reduce_motion
 	fullscreen_toggle.button_pressed = GameState.fullscreen
 	master_slider.value = GameState.master_volume
 	music_slider.value = GameState.music_volume
@@ -53,6 +58,7 @@ func _ready() -> void:
 	wasd_toggle.toggled.connect(_on_wasd_toggled)
 	mouse_dash_toggle.toggled.connect(_on_mouse_dash_toggled)
 	touch_toggle.toggled.connect(_on_touch_toggled)
+	reduce_motion_toggle.toggled.connect(_on_reduce_motion_toggled)
 	master_slider.value_changed.connect(_on_master_volume_changed)
 	music_slider.value_changed.connect(_on_music_volume_changed)
 	sfx_slider.value_changed.connect(_on_sfx_volume_changed)
@@ -63,7 +69,6 @@ func _ready() -> void:
 	best_label.text = "BEST SCORE: %d" % GameState.best_score
 	_update_controls_hint()
 	_animate_title()
-	_animate_robot()
 	Music.play("menu")
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -80,6 +85,57 @@ func _on_play_pressed() -> void:
 
 func _on_quit_pressed() -> void:
 	get_tree().quit()
+
+func _set_responsive_layout() -> void:
+	var viewport_size: Vector2 = get_viewport_rect().size
+	var compact_landscape: bool = viewport_size.x <= 760.0 or viewport_size.y <= 440.0
+	var narrow_layout: bool = viewport_size.x / maxf(viewport_size.y, 1.0) < 1.55
+	var menu_center: CenterContainer = $Center
+	var menu_panel: PanelContainer = $Center/Panel
+	var menu_box: VBoxContainer = $Center/Panel/VBox
+	var short_view: bool = viewport_size.y < 620.0
+	var button_width: float = clampf(viewport_size.x * (0.62 if compact_landscape else 0.40), 220.0, 420.0)
+	var button_height: float = 36.0 if short_view else (44.0 if compact_landscape else 48.0)
+	var spacing: int = 4 if short_view else 8
+	menu_panel.custom_minimum_size = Vector2(button_width + 32.0, 0.0)
+	menu_box.add_theme_constant_override("separation", spacing)
+	for menu_button: Button in [play_button, settings_button, achievements_button, quit_button]:
+		menu_button.custom_minimum_size = Vector2(button_width, button_height)
+	var logo: TextureRect = title_logo
+	logo.custom_minimum_size = Vector2(minf(button_width, 360.0), 64.0 if short_view else (96.0 if compact_landscape else 120.0))
+	$Center/Panel/VBox/Spacer.custom_minimum_size.y = 0.0 if short_view else 12.0
+	if narrow_layout:
+		menu_center.anchor_left = 0.025
+		menu_center.anchor_right = 0.975
+		menu_center.anchor_top = 0.015
+		menu_center.anchor_bottom = 0.985
+	else:
+		menu_center.anchor_left = 0.025 if compact_landscape else 0.04
+		menu_center.anchor_right = 0.52 if compact_landscape else 0.49
+		menu_center.anchor_top = 0.015 if compact_landscape else 0.035
+		menu_center.anchor_bottom = 0.985 if compact_landscape else 0.965
+	var compact_settings: bool = viewport_size.y < 620.0 or viewport_size.x < 1000.0
+	var settings_box: VBoxContainer = $SettingsOverlay/SettingsCenter/SettingsPanel/SettingsVBox
+	var settings_panel: PanelContainer = $SettingsOverlay/SettingsCenter/SettingsPanel
+	var settings_center: CenterContainer = $SettingsOverlay/SettingsCenter
+	settings_box.add_theme_constant_override("separation", 8 if compact_settings else 16)
+	settings_panel.custom_minimum_size.x = minf(420.0, maxf(viewport_size.x - 32.0, 320.0))
+	settings_center.offset_left = 12.0 if compact_settings else 0.0
+	settings_center.offset_top = 8.0 if compact_settings else 0.0
+	settings_center.offset_right = -12.0 if compact_settings else 0.0
+	settings_center.offset_bottom = -8.0 if compact_settings else 0.0
+	var achievement_panel: PanelContainer = $AchievementsOverlay/AchievementsCenter/AchievementsPanel
+	var achievement_scroll: ScrollContainer = $AchievementsOverlay/AchievementsCenter/AchievementsPanel/AchievementsVBox/AchievementsScroll
+	achievement_panel.custom_minimum_size.x = minf(600.0, maxf(viewport_size.x - 32.0, 288.0))
+	achievement_scroll.custom_minimum_size = Vector2(minf(540.0, maxf(viewport_size.x - 96.0, 224.0)), minf(360.0, maxf(viewport_size.y - 190.0, 180.0)))
+	var hint: Label = controls_hint
+	hint.visible = not narrow_layout and (not compact_landscape or viewport_size.x > 900.0)
+	hint.position = Vector2(viewport_size.x * 0.51 - 310.0, viewport_size.y - 34.0)
+	best_label.visible = true
+	$SettingsOverlay/SettingsDim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$AchievementsOverlay/AchievementsDim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$SettingsOverlay/SettingsDim.color.a = 0.72
+	$AchievementsOverlay/AchievementsDim.color.a = 0.72
 
 # --- Settings --------------------------------------------------------------
 
@@ -102,6 +158,9 @@ func _on_mouse_dash_toggled(value: bool) -> void:
 func _on_touch_toggled(value: bool) -> void:
 	GameState.set_touch_controls(value)
 	_update_controls_hint()
+
+func _on_reduce_motion_toggled(value: bool) -> void:
+	GameState.set_reduce_motion(value)
 
 func _on_master_volume_changed(value: float) -> void:
 	GameState.set_master_volume(value)
@@ -202,14 +261,6 @@ func _animate_title() -> void:
 	tw.tween_property(title_logo, "scale", Vector2(1.03, 1.03), 1.5)\
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tw.tween_property(title_logo, "scale", Vector2.ONE, 1.5)\
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-
-func _animate_robot() -> void:
-	_set_pivot.call_deferred(robot)
-	var tw := robot.create_tween().set_loops()
-	tw.tween_property(robot, "scale", Vector2(1.07, 1.07), 1.3)\
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(robot, "scale", Vector2.ONE, 1.3)\
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func _set_pivot(node: Control) -> void:

@@ -1,0 +1,51 @@
+[gd_scene format=3 uid="uid://4qd1v2u4qlnk"]
+
+[ext_resource type="Script" uid="uid://b1ayamcbd8ups" path="res://scripts/space_backdrop.gd" id="1_script"]
+[ext_resource type="Material" path="res://shaders/menu_bg_material.tres" id="2_stars"]
+[ext_resource type="Texture2D" uid="uid://dn5ixfpnsolet" path="res://assets/generated/menu_nebula_backdrop_2.png" id="4_plate"]
+
+[node name="SpaceBackdrop" type="CanvasLayer" unique_id=249831396]
+layer = -10
+script = ExtResource("1_script")
+
+[node name="Background" type="Control" parent="." unique_id=723628603]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="BasePlate" type="TextureRect" parent="Background" unique_id=353450291]
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_plate")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="DistantStars" type="ColorRect" parent="Background" unique_id=2084019280]
+material = ExtResource("2_stars")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="NearStars" type="ColorRect" parent="Background" unique_id=870067610]
+material = ExtResource("2_stars")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

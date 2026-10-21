@@ -16,6 +16,8 @@ var mouse_dash: bool = true
 ## On-screen touch controls (virtual joystick + dash/pause buttons). Defaults
 ## on: they only appear when a touch happens and auto-hide on keyboard/mouse.
 var touch_controls: bool = true
+## Freeze the atmospheric star planes for players who prefer reduced motion.
+var reduce_motion: bool = false
 ## Audio + display settings (persisted in the same file).
 var master_volume: float = 1.0
 var music_volume: float = 1.0
@@ -113,6 +115,13 @@ func set_touch_controls(value: bool) -> void:
 	save_settings()
 	settings_changed.emit()
 
+func set_reduce_motion(value: bool) -> void:
+	if reduce_motion == value:
+		return
+	reduce_motion = value
+	save_settings()
+	settings_changed.emit()
+
 func set_master_volume(value: float) -> void:
 	if is_equal_approx(master_volume, value):
 		return
@@ -169,6 +178,7 @@ func save_settings() -> void:
 	cfg.set_value("controls", "wasd", wasd_controls)
 	cfg.set_value("controls", "mouse_dash", mouse_dash)
 	cfg.set_value("controls", "touch", touch_controls)
+	cfg.set_value("visuals", "reduce_motion", reduce_motion)
 	cfg.set_value("audio", "master", master_volume)
 	cfg.set_value("audio", "music", music_volume)
 	cfg.set_value("audio", "sfx", sfx_volume)
@@ -185,6 +195,7 @@ func load_settings() -> void:
 		wasd_controls = true
 		mouse_dash = true
 		touch_controls = true
+		reduce_motion = false
 		master_volume = 1.0
 		music_volume = 1.0
 		sfx_volume = 1.0
@@ -196,6 +207,7 @@ func load_settings() -> void:
 	wasd_controls = _coerce_bool(cfg.get_value("controls", "wasd", true), true)
 	mouse_dash = _coerce_bool(cfg.get_value("controls", "mouse_dash", true), true)
 	touch_controls = _coerce_bool(cfg.get_value("controls", "touch", true), true)
+	reduce_motion = _coerce_bool(cfg.get_value("visuals", "reduce_motion", false), false)
 	master_volume = _coerce_volume(cfg.get_value("audio", "master", 1.0), 1.0)
 	music_volume = _coerce_volume(cfg.get_value("audio", "music", 1.0), 1.0)
 	sfx_volume = _coerce_volume(cfg.get_value("audio", "sfx", 1.0), 1.0)

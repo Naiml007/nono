@@ -1,6 +1,6 @@
 extends Node
 ## Headless verification of save/settings robustness:
-## 1) settings save/load round-trips (incl. new volume/fullscreen keys)
+## 1) settings save/load round-trips (incl. volume/fullscreen/reduce-motion keys)
 ## 2) missing + corrupted settings files fall back to defaults, never crash
 ## 3) achievements unlock and persist across a simulated reload
 ## 4) reset_progress() wipes best score + achievements but keeps settings
@@ -23,6 +23,7 @@ func _ready() -> void:
 	GameState.set_wasd_controls(false)
 	GameState.set_mouse_dash(false)
 	GameState.set_fullscreen(false)
+	GameState.set_reduce_motion(true)
 	GameState.save_settings()
 
 	# Dirty every field, then reload from disk.
@@ -32,6 +33,7 @@ func _ready() -> void:
 	GameState.wasd_controls = true
 	GameState.mouse_dash = true
 	GameState.fullscreen = true
+	GameState.reduce_motion = false
 	GameState.load_settings()
 
 	_check(is_equal_approx(GameState.master_volume, 0.42), "master volume round-trips")
@@ -40,6 +42,7 @@ func _ready() -> void:
 	_check(GameState.wasd_controls == false, "wasd control round-trips")
 	_check(GameState.mouse_dash == false, "mouse-dash control round-trips")
 	_check(GameState.fullscreen == false, "fullscreen round-trips")
+	_check(GameState.reduce_motion == true, "reduce-motion setting round-trips")
 
 	# --- Missing settings file: defaults, no crash (simulate a fresh boot:
 	# dirty the in-memory fields, then boot with no file on disk) ---
@@ -47,11 +50,13 @@ func _ready() -> void:
 	GameState.mouse_dash = false
 	GameState.master_volume = 9.9
 	GameState.fullscreen = true
+	GameState.reduce_motion = true
 	_remove(SETTINGS_PATH)
 	GameState.load_settings()
 	_check(GameState.wasd_controls == true, "missing settings file -> default wasd on")
 	_check(is_equal_approx(GameState.master_volume, 1.0), "missing settings file -> default volume 1.0")
 	_check(GameState.fullscreen == false, "missing settings file -> default fullscreen off")
+	_check(GameState.reduce_motion == false, "missing settings file -> default reduced motion off")
 
 	# --- Corrupted settings file (wrong types stored) ---
 	var bad := ConfigFile.new()
@@ -60,6 +65,7 @@ func _ready() -> void:
 	bad.set_value("audio", "music", "garbage")      # unparseable string
 	bad.set_value("audio", "master", "0.8")         # valid numeric string
 	bad.set_value("display", "fullscreen", "yes")   # truthy string
+	bad.set_value("visuals", "reduce_motion", "true")
 	bad.save(SETTINGS_PATH)
 	GameState.load_settings()
 	_check(GameState.wasd_controls == false, "string 'false' coerced to false (not true)")
@@ -67,6 +73,7 @@ func _ready() -> void:
 	_check(is_equal_approx(GameState.music_volume, 1.0), "garbage volume falls back to default 1.0")
 	_check(is_equal_approx(GameState.master_volume, 0.8), "numeric string volume parsed")
 	_check(GameState.fullscreen == true, "string 'yes' coerced to true")
+	_check(GameState.reduce_motion == true, "reduced-motion setting loads from visuals section")
 
 	# --- Missing best-score file (fresh boot: stale in-memory value first) ---
 	GameState.best_score = 9999
@@ -98,6 +105,7 @@ func _ready() -> void:
 	_check(GameState.best_score == 0, "reset_progress zeroes best score")
 	_check(Achievements.unlocked_count() == 0, "reset_progress wipes achievements")
 	_check(GameState.wasd_controls == false, "reset_progress keeps settings intact")
+	_check(GameState.reduce_motion == true, "reset_progress keeps reduced-motion preference")
 
 	# --- Task 7: volume changes are debounced (no disk write per slider frame) ---
 	_remove(SETTINGS_PATH)

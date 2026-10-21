@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://bpe2yfmvrlv85"]
+
+[ext_resource type="PackedScene" path="res://scenes/space_backdrop.tscn" id="1_space"]
+
+[node name="MenuSpace" type="CanvasLayer" unique_id=1566430336]
+layer = -10
+
+[node name="Backdrop" parent="." unique_id=966012670 instance=ExtResource("1_space")]

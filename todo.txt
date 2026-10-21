@@ -1,6 +1,33 @@
-fix: windows size  [DONE] stretch mode canvas_items + aspect keep; arena stays 1280x720 logical, camera limits/clamp in sync
+UI improvement plan — coherent visual pass (desktop + mobile; preserve all gameplay, control, and persistence behavior)
 
-fix needed:
-Boss HP low need more  [DONE] boss max_hp 18 -> 35
-Achievement dekhar jonno time thake na  [DONE] toast hold 2.4s -> 4.0s (fade 0.4 -> 0.6)
-loots onek compared to loot er ability strength  [DONE] buffs strengthened: speed +20%, dash -25% cd/+35% dist, magnet +110, combo +2s, value +2, magnet pickup 9s, heart +2 HP
+Goal: Keep NONO’s neon-pixel space identity and current Chakra Petch/theme system, but give the menu and all gameplay screens a coherent, atmospheric space-scene presentation. Layered space depth is inspired by Hollow Knight’s sense of atmosphere and parallax—not its characters or exact art. Backgrounds remain subordinate to gameplay and text.
+
+Phase 1 — Visual system & readability
+- Audit existing theme tokens, menu, HUD, settings, achievements, pause, upgrade, and game-over screens before editing.
+- Define/reuse shared backdrop layers, panel surfaces, spacing, typography, and focus/pressed/disabled states through `assets/ui/nono_theme.tres`; honor the existing 6-step type scale and token rules in `assets/ui/README.md`.
+- Preserve all existing actions, labels/information, settings, achievements, save data, and game flow. No balance/input/persistence changes.
+
+Phase 2 — Layered space backdrop
+- Build a restrained multi-plane space scene: deep base, diffuse nebula/planetary silhouettes, mid-distance debris/structures, and sparse foreground stars.
+- Use slow, independent parallax drift with restrained twinkle; ensure seamless screen coverage at wide and compact landscape aspect ratios.
+- Reuse suitable existing art only after visual inspection; generate new assets where needed. Keep key text/control regions low-detail and high-contrast.
+
+Phase 3 — Main menu hierarchy
+- Retain logo/robot, title, primary PLAY action, settings, achievements, quit, best score, and control hint.
+- Tune placement and scale for the 1280×720 design viewport and compact landscape screens; prevent clipped controls or background detail behind text.
+- Keep Settings and Achievements overlays consistent with the new backdrop, with clear focus, close/back behavior, and readable scroll areas.
+
+Phase 4 — Gameplay HUD and state overlays
+- Carry the same spatial atmosphere into gameplay without obscuring player, enemies, energy cores, projectiles, arena boundaries, HUD, or touch controls.
+- Standardize HUD readability and panel styling across normal play and wave/boss states.
+- Align pause, upgrade choice, and game-over overlays with the shared system; preserve keyboard shortcuts, focus flow, touch affordances, and pause/time behavior.
+
+Phase 5 — Responsive/accessibility/performance checks
+- Validate at desktop 1280×720 and wider aspect, plus compact landscape mobile: safe areas, legible text, ≥88px touch targets where appropriate, no overlay/HUD collisions or clipped panels.
+- Check contrast in animated and static moments, color-independent feedback, and keyboard/controller focus visibility.
+- Keep motion subtle and shader work bounded; offer a low-motion/static fallback if animation becomes distracting, and compare on a representative mobile device.
+
+Phase 6 — Verification and finish
+- Capture menu, settings, achievements, gameplay HUD, pause, upgrade, game-over, boss, and touch layouts at representative desktop/mobile sizes.
+- Run relevant UI/input, mobile UI, upgrade, persistence, camera, and smoke tests; fix regressions before calling the pass complete.
+- Acceptance: coherent visual language across states; all existing behavior intact; no readability, responsiveness, input, or runtime regressions.

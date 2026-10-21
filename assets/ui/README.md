@@ -38,6 +38,8 @@ danger soft 1.00,0.70,0.70 | boss orange 1.00,0.50,0.20.
   ToastDesc, FloatPopup, PopupSmall, DebugInfo. The *Hud variants add a single
   outline so text over the starfield stays legible; panel variants have neither
   outline nor shadow.
+- Panel/PanelContainer: MenuPanel, OverlaysPanel, FloatPanel, HUDPanel,
+  HUDReadoutPanel, DebugPanel.
 - Button: Primary, Ghost, Danger, Hud, Touch, Card.
 
 ## Text treatment rule
